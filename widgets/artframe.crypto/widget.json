@@ -1,0 +1,53 @@
+{
+  "$schema": "https://artframe.mlynn.dev/widgets/widget.schema.json",
+  "spec": 1,
+  "id": "artframe.crypto",
+  "author": "ArtFrame",
+  "version": "1.0.0",
+  "name": "Crypto price",
+  "description": "A coin's price with its last 24 hours as a sparkline (CoinGecko)",
+  "icon": "bitcoinsign.circle",
+  "size": "small",
+  "title": "{{ settings.coin | capitalize }}",
+  "x-tests": "choice setting, settings in the URL, map:1 over pairs, (expr)[i], arithmetic, sparkline without a baseline",
+  "settings": [
+    { "key": "coin", "label": "Coin", "type": "choice", "default": "bitcoin",
+      "options": [{ "value": "bitcoin", "label": "Bitcoin" }, { "value": "ethereum", "label": "Ethereum" }, { "value": "solana", "label": "Solana" }] },
+    { "key": "currency", "label": "Currency code", "type": "text", "default": "usd", "help": "usd, eur, gbp, jpy…" }
+  ],
+  "data": {
+    "chart": {
+      "source": "http",
+      "url": "https://api.coingecko.com/api/v3/coins/{{ settings.coin }}/market_chart?vs_currency={{ settings.currency | lower | url }}&days=1",
+      "refresh": 600,
+      "error": "CoinGecko unavailable"
+    }
+  },
+  "layout": {
+    "type": "row",
+    "children": [
+      {
+        "type": "column",
+        "flex": 1,
+        "children": [
+          { "type": "text", "text": "{{ (data.chart.prices | last)[1] | price }} {{ settings.currency | upper }}", "size": 24, "font": "light", "tabular": true },
+          {
+            "type": "text",
+            "text": "{{ (data.chart.prices | last)[1] >= (data.chart.prices | first)[1] ? '▲' : '▼' }} {{ (((data.chart.prices | last)[1] - (data.chart.prices | first)[1]) / (data.chart.prices | first)[1] * 100) | abs | fixed:2 }}% in 24 h",
+            "size": 13,
+            "tabular": true,
+            "color": "{{ (data.chart.prices | last)[1] >= (data.chart.prices | first)[1] ? 'up' : 'down' }}"
+          }
+        ]
+      },
+      {
+        "type": "sparkline",
+        "points": "data.chart.prices | map:1",
+        "color": "{{ (data.chart.prices | last)[1] >= (data.chart.prices | first)[1] ? 'up' : 'down' }}",
+        "width": 90,
+        "height": 34,
+        "before": 10
+      }
+    ]
+  }
+}

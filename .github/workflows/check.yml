@@ -1,0 +1,37 @@
+name: Check widgets
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # so --base can compare with what's published
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build the checker
+        working-directory: checker
+        run: ./gradlew -q installDist
+      - name: Check
+        run: |
+          if [ "${{ github.event_name }}" = pull_request ]; then
+            tools/build_index.py --check --base "origin/${{ github.base_ref }}"
+          else
+            tools/build_index.py
+          fi
+      - name: Keep the built index
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: widgets-index
+          path: dist/

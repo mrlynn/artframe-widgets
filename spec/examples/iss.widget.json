@@ -1,0 +1,39 @@
+{
+  "$schema": "../widget.schema.json",
+  "spec": 1,
+  "id": "example.iss",
+  "name": "Space station",
+  "description": "Where the International Space Station is right now",
+  "icon": "globe.americas",
+  "author": "ArtFrame examples",
+  "size": "small",
+  "title": "Space station",
+  "data": {
+    "iss": {
+      "source": "http",
+      "url": "https://api.wheretheiss.at/v1/satellites/25544",
+      "refresh": 120,
+      "error": "Can't reach the station"
+    }
+  },
+  "layout": {
+    "type": "column",
+    "children": [
+      {
+        "type": "row",
+        "children": [
+          { "type": "text", "text": "🛰️", "size": 30 },
+          {
+            "type": "column",
+            "before": 12,
+            "children": [
+              { "type": "text", "text": "{{ data.iss.latitude | abs | fixed:1 }}°{{ data.iss.latitude >= 0 ? 'N' : 'S' }}  {{ data.iss.longitude | abs | fixed:1 }}°{{ data.iss.longitude >= 0 ? 'E' : 'W' }}", "size": 20, "font": "light", "tabular": true },
+              { "type": "text", "text": "{{ data.iss.altitude | round }} km up · {{ data.iss.velocity | number:0 }} km/h", "size": 13, "font": "light", "color": "muted" }
+            ]
+          }
+        ]
+      },
+      { "type": "text", "before": 6, "text": "{{ data.iss.visibility == 'daylight' ? 'In sunlight' : 'In Earth’s shadow' }}", "size": 13, "color": "accent" }
+    ]
+  }
+}

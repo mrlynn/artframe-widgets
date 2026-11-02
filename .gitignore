@@ -1,0 +1,6 @@
+.DS_Store
+dist/
+checker/build/
+checker/.gradle/
+checker/.kotlin/
+__pycache__/

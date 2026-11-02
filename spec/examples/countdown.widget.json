@@ -1,0 +1,31 @@
+{
+  "$schema": "../widget.schema.json",
+  "spec": 1,
+  "id": "example.countdown",
+  "name": "Countdown",
+  "description": "Days until a date you choose",
+  "icon": "hourglass",
+  "author": "ArtFrame examples",
+  "size": "small",
+  "title": "{{ settings.label }}",
+  "settings": [
+    { "key": "label", "label": "What's happening", "type": "text", "default": "Vacation" },
+    { "key": "date", "label": "Date (YYYY-MM-DD)", "type": "text", "default": "2026-12-24" }
+  ],
+  "needs": [{ "unless": "(settings.date | daysUntil) != null", "message": "Set a date in the widget's settings" }],
+  "layout": {
+    "type": "row",
+    "align": "baseline",
+    "children": [
+      { "type": "text", "text": "{{ settings.date | daysUntil | abs }}", "size": 58, "font": "thin", "tabular": true },
+      {
+        "type": "text",
+        "before": 10,
+        "size": 16,
+        "font": "light",
+        "color": "muted",
+        "text": "{{ (settings.date | daysUntil) == 1 ? 'day to go' : (settings.date | daysUntil) > 0 ? 'days to go' : (settings.date | daysUntil) == 0 ? 'days: it’s today' : 'days ago' }}"
+      }
+    ]
+  }
+}

@@ -1,0 +1,1 @@
+Copied from the ArtFrame app repo at d4c793d by tools/sync-from-app.sh. Edit the app, not these.

@@ -1,0 +1,28 @@
+{
+  "$schema": "https://artframe.mlynn.dev/widgets/widget.schema.json",
+  "spec": 1,
+  "id": "artframe.year-progress",
+  "author": "ArtFrame",
+  "version": "1.0.0",
+  "name": "Year progress",
+  "description": "Week, day of the year and how much of it has gone, on the art itself",
+  "icon": "calendar.badge.clock",
+  "size": "small",
+  "card": false,
+  "x-tests": "card: false (backdrop colours), no data at all, now, date patterns, arithmetic, bar with a computed width",
+  "layout": {
+    "type": "column",
+    "children": [
+      { "type": "text", "text": "Week {{ now | date:'w' }} · day {{ now | date:'D' }}", "size": 18, "font": "light", "opacity": 0.86 },
+      {
+        "type": "row",
+        "before": 6,
+        "children": [
+          { "type": "bar", "color": "accent", "height": 4, "radius": 2, "width": "{{ ((now | date:'D') / 365 * 200) | round }}" },
+          { "type": "bar", "color": "#55FFFFFF", "height": 4, "radius": 2, "width": "{{ 200 - ((now | date:'D') / 365 * 200) | round }}" },
+          { "type": "text", "text": "{{ ((now | date:'D') / 365 * 100) | round }}%", "size": 12, "color": "accent", "before": 8, "tabular": true }
+        ]
+      }
+    ]
+  }
+}

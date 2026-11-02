@@ -1,0 +1,35 @@
+{
+  "$schema": "https://artframe.mlynn.dev/widgets/widget.schema.json",
+  "spec": 1,
+  "id": "artframe.github",
+  "author": "ArtFrame",
+  "version": "1.0.0",
+  "name": "GitHub repository",
+  "description": "Stars, forks and open issues for a repository",
+  "icon": "star",
+  "size": "small",
+  "title": "{{ data.repo.full_name || settings.repo }}",
+  "x-tests": "text setting in the URL path, a need on a setting, number filter, ago",
+  "settings": [
+    { "key": "repo", "label": "Repository", "type": "text", "default": "mongodb/mongo", "help": "owner/name" }
+  ],
+  "needs": [{ "unless": "settings.repo", "message": "Set a repository in the widget's settings" }],
+  "data": {
+    "repo": { "source": "http", "url": "https://api.github.com/repos/{{ settings.repo | trim }}", "refresh": 3600, "error": "Repository not found" }
+  },
+  "layout": {
+    "type": "column",
+    "children": [
+      {
+        "type": "row",
+        "align": "baseline",
+        "children": [
+          { "type": "text", "text": "★ {{ data.repo.stargazers_count | number }}", "size": 30, "font": "thin", "tabular": true },
+          { "type": "text", "text": "stars", "size": 13, "font": "light", "color": "muted", "before": 8 }
+        ]
+      },
+      { "type": "text", "text": "{{ data.repo.forks_count | number }} forks · {{ data.repo.open_issues_count | number }} open issues", "size": 13, "font": "light", "color": "muted", "before": 4 },
+      { "type": "text", "when": "!layout.tight", "text": "Last push {{ data.repo.pushed_at | ago }}", "size": 13, "color": "accent", "before": 4 }
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://artframe.mlynn.dev/widgets/widget.schema.json",
+  "spec": 1,
+  "id": "artframe.quote",
+  "author": "ArtFrame",
+  "version": "1.0.0",
+  "name": "Quote of the day",
+  "description": "A daily quotation from ZenQuotes",
+  "icon": "quote.opening",
+  "size": "wide",
+  "title": "Today's quote",
+  "x-tests": "wide size, a top-level JSON array, multi-line text",
+  "data": {
+    "zen": { "source": "http", "url": "https://zenquotes.io/api/today", "refresh": 3600 }
+  },
+  "layout": {
+    "type": "column",
+    "children": [
+      { "type": "text", "text": "“{{ data.zen[0].q }}”", "size": 22, "font": "light", "lines": 3 },
+      { "type": "text", "text": "— {{ data.zen[0].a }}", "size": 14, "color": "accent", "before": 10 }
+    ]
+  }
+}

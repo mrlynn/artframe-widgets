@@ -1,0 +1,49 @@
+{
+  "$schema": "https://artframe.mlynn.dev/widgets/widget.schema.json",
+  "spec": 1,
+  "id": "artframe.launches",
+  "author": "ArtFrame",
+  "version": "1.0.0",
+  "name": "Rocket launches",
+  "description": "The next launches anywhere in the world (Launch Library 2)",
+  "icon": "airplane.departure",
+  "size": "large",
+  "title": "Next launches",
+  "x-tests": "large size, list with groupBy and header on a computed day, UTC times shown locally, status colour",
+  "data": {
+    "ll": {
+      "source": "http",
+      "url": "https://ll.thespacedevs.com/2.2.0/launch/upcoming/?limit=6&mode=list",
+      "refresh": 3600,
+      "error": "Launch schedule unavailable"
+    }
+  },
+  "layout": {
+    "type": "list",
+    "items": "data.ll.results",
+    "as": "r",
+    "max": 4,
+    "gap": 8,
+    "groupBy": "r.net | date:'yyyy-MM-dd'",
+    "groupGap": 12,
+    "empty": "Nothing scheduled",
+    "header": { "type": "text", "text": "{{ group | day }}", "size": 13, "font": "medium", "color": "accent" },
+    "item": {
+      "type": "row",
+      "align": "baseline",
+      "children": [
+        { "type": "text", "text": "{{ r.net | time }}", "size": 14, "color": "muted", "tabular": true, "width": 72 },
+        {
+          "type": "column",
+          "flex": 1,
+          "children": [
+            { "type": "text", "text": "{{ r.name }}", "size": 15 },
+            { "type": "text", "text": "{{ r.location | truncate:48 }}", "size": 11, "font": "light", "color": "muted" }
+          ]
+        },
+        { "type": "text", "text": "{{ r.status.abbrev }}", "size": 11, "font": "medium", "before": 8,
+          "color": "{{ r.status.abbrev == 'Go' || r.status.abbrev == 'In Flight' ? 'up' : 'muted' }}" }
+      ]
+    }
+  }
+}

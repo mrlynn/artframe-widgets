@@ -1,0 +1,36 @@
+{
+  "$schema": "../widget.schema.json",
+  "spec": 1,
+  "id": "example.one-feed",
+  "name": "One feed",
+  "description": "A single RSS or Atom feed with the time of each story",
+  "icon": "dot.radiowaves.left.and.right",
+  "author": "ArtFrame examples",
+  "size": "large",
+  "title": "{{ settings.name }}",
+  "settings": [
+    { "key": "name", "label": "Title", "type": "text", "default": "NASA" },
+    { "key": "url", "label": "Feed URL", "type": "text", "default": "https://www.nasa.gov/feed/" },
+    { "key": "count", "label": "Stories", "type": "number", "default": 6, "min": 1, "max": 10 }
+  ],
+  "needs": [{ "unless": "settings.url", "message": "Add a feed URL in the widget's settings" }],
+  "data": {
+    "feed": { "source": "http", "url": "{{ settings.url }}", "format": "rss", "refresh": 900, "error": "Feed unavailable" }
+  },
+  "layout": {
+    "type": "list",
+    "items": "data.feed.items",
+    "as": "story",
+    "max": "{{ settings.count }}",
+    "gap": 8,
+    "empty": "Nothing new",
+    "item": {
+      "type": "row",
+      "align": "baseline",
+      "children": [
+        { "type": "text", "text": "{{ story.published | ago }}", "size": 11, "color": "accent", "width": 70 },
+        { "type": "text", "text": "{{ story.title }}", "size": 15, "flex": 1 }
+      ]
+    }
+  }
+}

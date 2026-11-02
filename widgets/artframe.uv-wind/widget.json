@@ -1,0 +1,59 @@
+{
+  "$schema": "https://artframe.mlynn.dev/widgets/widget.schema.json",
+  "spec": 1,
+  "id": "artframe.uv-wind",
+  "author": "ArtFrame",
+  "version": "1.0.0",
+  "name": "UV and wind",
+  "description": "UV index, wind and the next 12 hours of temperature, straight from Open-Meteo",
+  "icon": "sun.max",
+  "size": "small",
+  "title": "UV & wind",
+  "x-tests": "number settings, hud.units in the URL, wmoIcon, nested ternary, sparkline from a plain array, compact",
+  "settings": [
+    { "key": "lat", "label": "Latitude", "type": "number", "default": 40.23, "min": -90, "max": 90 },
+    { "key": "lon", "label": "Longitude", "type": "number", "default": -74.94, "min": -180, "max": 180 }
+  ],
+  "data": {
+    "om": {
+      "source": "http",
+      "url": "https://api.open-meteo.com/v1/forecast?latitude={{ settings.lat }}&longitude={{ settings.lon }}&timezone=auto&forecast_hours=12&current=uv_index,wind_speed_10m,wind_direction_10m,weather_code&hourly=temperature_2m{{ hud.metric ? '' : '&temperature_unit=fahrenheit&wind_speed_unit=mph' }}",
+      "refresh": 900
+    }
+  },
+  "layout": {
+    "type": "column",
+    "children": [
+      {
+        "type": "row",
+        "children": [
+          { "type": "text", "text": "{{ data.om.current.weather_code | wmoIcon }}", "size": 30 },
+          {
+            "type": "column",
+            "before": 12,
+            "flex": 1,
+            "children": [
+              {
+                "type": "text",
+                "size": 16,
+                "text": "UV {{ data.om.current.uv_index | round:1 }} · {{ data.om.current.uv_index < 3 ? 'Low' : data.om.current.uv_index < 6 ? 'Moderate' : data.om.current.uv_index < 8 ? 'High' : 'Very high' }}",
+                "color": "{{ data.om.current.uv_index < 3 ? 'up' : data.om.current.uv_index < 6 ? '#FACC15' : 'down' }}"
+              },
+              { "type": "text", "text": "Wind {{ data.om.current.wind_speed_10m | round }} {{ hud.metric ? 'km/h' : 'mph' }} from {{ data.om.current.wind_direction_10m }}°", "size": 13, "font": "light", "color": "muted" }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "row",
+        "when": "!layout.compact",
+        "before": 8,
+        "children": [
+          { "type": "text", "text": "Next 12 h", "size": 11, "color": "muted", "width": 64 },
+          { "type": "sparkline", "points": "data.om.hourly.temperature_2m", "flex": 1, "height": 24 },
+          { "type": "text", "text": "{{ data.om.hourly.temperature_2m | min | round }}–{{ data.om.hourly.temperature_2m | max | round }}°", "size": 12, "tabular": true, "before": 8 }
+        ]
+      }
+    ]
+  }
+}

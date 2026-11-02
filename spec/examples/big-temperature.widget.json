@@ -1,0 +1,20 @@
+{
+  "$schema": "../widget.schema.json",
+  "spec": 1,
+  "id": "example.big-temperature",
+  "name": "Big temperature",
+  "description": "Today's temperature on its own, readable across the room. Uses the built-in weather provider, so it follows the HUD's city and units.",
+  "icon": "thermometer.medium",
+  "author": "ArtFrame examples",
+  "size": "small",
+  "card": false,
+  "needs": [{ "unless": "hud.location", "message": "Add a location to hud.json" }],
+  "data": { "wx": { "source": "weather" } },
+  "layout": {
+    "type": "column",
+    "children": [
+      { "type": "text", "text": "{{ data.wx.icon }} {{ data.wx.temp | round }}°", "size": 64, "font": "thin" },
+      { "type": "text", "text": "{{ data.wx.summary }} · high {{ data.wx.days[0].high | round }}° · low {{ data.wx.days[0].low | round }}°", "size": 18, "font": "light", "opacity": 0.86 }
+    ]
+  }
+}

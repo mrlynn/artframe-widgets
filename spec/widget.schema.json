@@ -1,0 +1,233 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://artframe.mlynn.dev/widgets/widget.schema.json",
+  "title": "ArtFrame widget",
+  "description": "An ArtFrame HUD widget, spec version 1. See SPEC.md.",
+  "type": "object",
+  "required": ["spec", "id", "name", "layout"],
+  "additionalProperties": false,
+  "patternProperties": { "^x-": {} },
+  "properties": {
+    "$schema": { "type": "string" },
+    "spec": { "const": 1 },
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" },
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "icon": { "type": "string", "description": "An SF Symbol name, for the Mac app" },
+    "author": { "type": "string" },
+    "version": { "type": "string" },
+    "homepage": { "type": "string" },
+    "size": { "enum": ["small", "large", "wide"], "default": "small" },
+    "card": { "type": "boolean", "default": true },
+    "weight": { "type": "number", "minimum": 0.25, "maximum": 4, "default": 1 },
+    "title": { "$ref": "#/$defs/template" },
+    "settings": { "type": "array", "items": { "$ref": "#/$defs/setting" } },
+    "data": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[A-Za-z][A-Za-z0-9_]{0,39}$" },
+      "additionalProperties": { "$ref": "#/$defs/source" }
+    },
+    "needs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["unless", "message"],
+        "additionalProperties": false,
+        "properties": { "unless": { "$ref": "#/$defs/expression" }, "message": { "$ref": "#/$defs/template" } }
+      }
+    },
+    "layout": { "$ref": "#/$defs/node" }
+  },
+  "$defs": {
+    "expression": { "type": "string", "description": "A bare expression, e.g. data.q.quotes or !layout.compact" },
+    "template": { "type": "string", "description": "Text with {{ expression }} holes" },
+    "number": { "oneOf": [{ "type": "number" }, { "$ref": "#/$defs/template" }] },
+    "boolean": { "oneOf": [{ "type": "boolean" }, { "$ref": "#/$defs/template" }] },
+    "color": {
+      "description": "text, muted, accent, up, down, #RRGGBB, #AARRGGBB, or a template giving one",
+      "type": "string"
+    },
+    "setting": {
+      "type": "object",
+      "required": ["key"],
+      "properties": {
+        "key": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]{0,39}$" },
+        "label": { "type": "string" },
+        "type": { "enum": ["text", "number", "toggle", "choice"], "default": "text" },
+        "default": {},
+        "help": { "type": "string" },
+        "secret": { "type": "boolean" },
+        "min": { "type": "number" },
+        "max": { "type": "number" },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["value"],
+            "properties": { "value": {}, "label": { "type": "string" } }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "choice" } } },
+          "then": { "required": ["options"] }
+        },
+        {
+          "if": { "properties": { "secret": { "const": true } }, "required": ["secret"] },
+          "then": { "not": { "required": ["default"] }, "properties": { "type": { "const": "text" } } }
+        }
+      ]
+    },
+    "source": {
+      "type": "object",
+      "required": ["source"],
+      "properties": {
+        "source": { "enum": ["http", "weather", "air", "moon", "markets", "calendar", "headlines"] },
+        "url": {
+          "$ref": "#/$defs/template",
+          "description": "https:// with the site written out, then /, ? or the end before any {{ }}; or a single text setting, {{ settings.feed }}",
+          "pattern": "^(https://[A-Za-z0-9.-]+(:[0-9]{1,5})?([/?#][^{]*(\\{\\{.*)?)?|\\{\\{\\s*settings\\.[A-Za-z][A-Za-z0-9_]*\\s*\\}\\})$"
+        },
+        "format": { "enum": ["json", "rss", "text"], "default": "json" },
+        "refresh": { "type": "integer", "minimum": 60, "maximum": 86400, "default": 900 },
+        "headers": { "type": "object", "additionalProperties": { "$ref": "#/$defs/template" } },
+        "loading": { "type": "string" },
+        "error": { "type": "string" },
+        "optional": { "type": "boolean" }
+      },
+      "if": { "properties": { "source": { "const": "http" } } },
+      "then": { "required": ["url"] }
+    },
+    "common": {
+      "when": { "$ref": "#/$defs/expression" },
+      "flex": { "$ref": "#/$defs/number" },
+      "width": { "$ref": "#/$defs/number" },
+      "height": { "$ref": "#/$defs/number" },
+      "before": { "$ref": "#/$defs/number" }
+    },
+    "node": {
+      "type": "object",
+      "required": ["type"],
+      "properties": { "type": { "enum": ["column", "row", "list", "text", "label", "clock", "sparkline", "bar", "spacer"] } },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "enum": ["column", "row"] } } },
+          "then": {
+            "required": ["children"],
+            "properties": {
+              "type": true, "when": true, "flex": true, "width": true, "height": true, "before": true,
+              "children": { "type": "array", "items": { "$ref": "#/$defs/node" } },
+              "gap": { "$ref": "#/$defs/number" },
+              "align": { "enum": ["start", "center", "end", "baseline"] }
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "list" } } },
+          "then": {
+            "required": ["items", "item"],
+            "properties": {
+              "type": true, "when": true, "flex": true, "width": true, "height": true, "before": true,
+              "items": { "$ref": "#/$defs/expression" },
+              "item": { "$ref": "#/$defs/node" },
+              "as": { "type": "string" },
+              "max": { "$ref": "#/$defs/number" },
+              "direction": { "enum": ["column", "row"] },
+              "gap": { "$ref": "#/$defs/number" },
+              "empty": { "$ref": "#/$defs/template" },
+              "groupBy": { "$ref": "#/$defs/expression" },
+              "header": { "$ref": "#/$defs/node" },
+              "groupGap": { "$ref": "#/$defs/number" }
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "text" } } },
+          "then": {
+            "required": ["text"],
+            "properties": {
+              "type": true, "when": true, "flex": true, "width": true, "height": true, "before": true,
+              "text": { "$ref": "#/$defs/template" },
+              "size": { "$ref": "#/$defs/number" },
+              "font": { "enum": ["thin", "light", "regular", "medium"] },
+              "color": { "$ref": "#/$defs/color" },
+              "lines": { "$ref": "#/$defs/number" },
+              "tabular": { "$ref": "#/$defs/boolean" },
+              "tracking": { "$ref": "#/$defs/number" },
+              "opacity": { "$ref": "#/$defs/number" },
+              "align": { "enum": ["start", "center", "end"] }
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "label" } } },
+          "then": {
+            "required": ["text"],
+            "properties": {
+              "type": true, "when": true, "flex": true, "width": true, "height": true, "before": true,
+              "text": { "$ref": "#/$defs/template" },
+              "color": { "$ref": "#/$defs/color" }
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "clock" } } },
+          "then": {
+            "properties": {
+              "type": true, "when": true, "flex": true, "width": true, "height": true, "before": true,
+              "format": { "$ref": "#/$defs/template" },
+              "format24": { "$ref": "#/$defs/template" },
+              "size": { "$ref": "#/$defs/number" },
+              "font": { "enum": ["thin", "light", "regular", "medium"] },
+              "color": { "$ref": "#/$defs/color" },
+              "tabular": { "$ref": "#/$defs/boolean" },
+              "tracking": { "$ref": "#/$defs/number" },
+              "opacity": { "$ref": "#/$defs/number" },
+              "align": { "enum": ["start", "center", "end"] }
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "sparkline" } } },
+          "then": {
+            "required": ["points"],
+            "properties": {
+              "type": true, "when": true, "flex": true, "width": true, "height": true, "before": true,
+              "points": { "$ref": "#/$defs/expression" },
+              "baseline": { "$ref": "#/$defs/expression" },
+              "color": { "$ref": "#/$defs/color" }
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "bar" } } },
+          "then": {
+            "properties": {
+              "type": true, "when": true, "flex": true, "width": true, "height": true, "before": true,
+              "color": { "$ref": "#/$defs/color" },
+              "radius": { "$ref": "#/$defs/number" }
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "spacer" } } },
+          "then": {
+            "properties": {
+              "type": true, "when": true, "flex": true, "width": true, "height": true, "before": true,
+              "size": { "$ref": "#/$defs/number" }
+            },
+            "additionalProperties": false
+          }
+        }
+      ]
+    }
+  }
+}
