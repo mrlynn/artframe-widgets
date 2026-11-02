@@ -36,7 +36,7 @@ tools/build_index.py --check          # check every widget
 tools/build_index.py                  # check, then write dist/
 ```
 
-`dist/` holds `index.json`, each widget at `widgets/<id>/<version>.widget.json`, its
+`dist/` holds `index.json`, each widget at `<id>/<version>.widget.json`, its
 screenshot, and `widget.schema.json`. The site copies it to `artframe.mlynn.dev/widgets/`
 with `npm run sync-widgets`.
 
@@ -51,8 +51,8 @@ with `npm run sync-widgets`.
     "icon": "star", "size": "small", "author": "ArtFrame", "version": "1.0.0",
     "homepage": null, "spec": 1,
     "sites": ["api.github.com"], "choosesSite": false, "needsKey": false,
-    "file": "widgets/artframe.github/1.0.0.widget.json", "sha256": "…", "bytes": 1583,
-    "screenshot": "widgets/artframe.github/screenshot.png"
+    "file": "artframe.github/1.0.0.widget.json", "sha256": "…", "bytes": 1583,
+    "screenshot": "artframe.github/screenshot.png"
   }]
 }
 ```

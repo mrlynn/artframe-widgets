@@ -144,10 +144,10 @@ def check(base=None):
             "sites": report["hosts"],
             "choosesSite": report["chosenSite"],
             "needsKey": any(s.get("secret") for s in settings),
-            "file": f"widgets/{wid}/{version}.widget.json",
+            "file": f"{wid}/{version}.widget.json",
             "sha256": hashlib.sha256(raw).hexdigest(),
             "bytes": len(raw),
-            "screenshot": f"widgets/{wid}/screenshot.png",
+            "screenshot": f"{wid}/screenshot.png",
         })
     return entries, problems
 
@@ -156,7 +156,7 @@ def write(entries, out):
     if out.exists():
         shutil.rmtree(out)
     for e in entries:
-        folder = out / "widgets" / e["id"]
+        folder = out / e["id"]
         folder.mkdir(parents=True)
         shutil.copyfile(WIDGETS / e["id"] / "widget.json", out / e["file"])
         shutil.copyfile(WIDGETS / e["id"] / "screenshot.png", out / e["screenshot"])
