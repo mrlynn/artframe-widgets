@@ -70,7 +70,7 @@ is an error, so typos don't fail silently.
 **Replacing a built-in.** A file whose `id` is a built-in's (`clock`,
 `weather`, `sun`, `air`, `calendar`, `markets`, `headlines`) replaces it. The
 built-in files are in
-[`artframe/app/src/main/assets/widgets`](../../artframe/app/src/main/assets/widgets):
+[`built-in`](built-in):
 copy one, change it, and install it under the same id.
 
 ## Settings
@@ -463,8 +463,8 @@ the weather with no city), for `optional` sources.
 ## Limits
 
 - A widget file is at most 64 KB, with at most 400 layout nodes, 20 deep.
-- HTTP sources: `http` and `https` only, 512 KB per response, at most one
-  fetch a minute per source.
+- HTTP sources: `https` only, 512 KB per response, at most one fetch a
+  minute per source.
 - Lists draw at most 200 items.
 - A card doesn't scroll or shrink its text: what doesn't fit is cut off at
   the card's edge. Large cards are about 230 dp tall next to each other, and

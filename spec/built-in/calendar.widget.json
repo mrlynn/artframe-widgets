@@ -1,0 +1,30 @@
+{
+  "spec": 1,
+  "id": "calendar",
+  "name": "Calendar",
+  "description": "Your calendars, from the links below",
+  "icon": "calendar",
+  "size": "large",
+  "title": "Agenda",
+  "needs": [{ "unless": "hud.calendars", "message": "Add a calendar link to hud.json" }],
+  "data": { "cal": { "source": "calendar", "error": "Calendar unavailable" } },
+  "layout": {
+    "type": "list",
+    "items": "data.cal.events",
+    "as": "e",
+    "max": 7,
+    "gap": 6,
+    "groupBy": "e.day",
+    "groupGap": 12,
+    "empty": "Nothing scheduled",
+    "header": { "type": "text", "text": "{{ group | day }}", "size": 13, "font": "medium", "color": "accent" },
+    "item": {
+      "type": "row",
+      "children": [
+        { "type": "bar", "color": "{{ e.color }}", "width": 4, "height": 16 },
+        { "type": "text", "text": "{{ e.allDay ? 'All day' : (e.start | time) }}", "size": 14, "tabular": true, "color": "{{ e.live ? 'accent' : 'muted' }}", "width": 72, "before": 10 },
+        { "type": "text", "text": "{{ e.title }}", "size": 15, "flex": 1 }
+      ]
+    }
+  }
+}

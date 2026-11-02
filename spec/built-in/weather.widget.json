@@ -1,0 +1,55 @@
+{
+  "spec": 1,
+  "id": "weather",
+  "name": "Weather",
+  "description": "Now and the next five days, for the city below",
+  "icon": "cloud.sun",
+  "size": "small",
+  "weight": 1.5,
+  "title": "{{ data.wx.place || 'Weather' }}",
+  "needs": [{ "unless": "hud.location", "message": "Add a location to hud.json" }],
+  "data": { "wx": { "source": "weather" } },
+  "layout": {
+    "type": "column",
+    "children": [
+      {
+        "type": "row",
+        "children": [
+          { "type": "text", "text": "{{ data.wx.icon }}", "size": 46 },
+          { "type": "text", "text": "{{ data.wx.temp | round }}°", "size": 58, "font": "thin", "before": 12 },
+          {
+            "type": "column",
+            "flex": 1,
+            "before": 14,
+            "children": [
+              { "type": "text", "text": "{{ data.wx.summary }}", "size": 18, "font": "light" },
+              { "type": "text", "text": "Feels {{ data.wx.feelsLike | round }}°", "size": 13, "font": "light", "color": "muted" },
+              { "type": "text", "text": "{{ data.wx.humidity }}% humidity · {{ data.wx.wind | round }} {{ data.wx.windUnit }}", "size": 13, "font": "light", "color": "muted", "lines": 2 }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "list",
+        "when": "!layout.compact",
+        "before": 12,
+        "direction": "row",
+        "items": "data.wx.days",
+        "as": "d",
+        "max": 5,
+        "item": {
+          "type": "column",
+          "flex": 1,
+          "align": "center",
+          "children": [
+            { "type": "text", "text": "{{ d.date | weekday }}", "size": 12, "font": "light", "color": "muted" },
+            { "type": "text", "text": "{{ d.icon }}", "size": 22 },
+            { "type": "text", "text": "{{ d.high | round }}°", "size": 15 },
+            { "type": "text", "text": "{{ d.low | round }}°", "size": 13, "font": "light", "color": "muted" },
+            { "type": "text", "when": "d.precip >= 30", "text": "{{ d.precip }}%", "size": 11, "color": "#7DBEFF" }
+          ]
+        }
+      }
+    ]
+  }
+}

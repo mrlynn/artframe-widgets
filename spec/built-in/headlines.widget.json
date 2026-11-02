@@ -1,0 +1,24 @@
+{
+  "spec": 1,
+  "id": "headlines",
+  "name": "Headlines",
+  "description": "The latest from the feeds below",
+  "icon": "newspaper",
+  "size": "wide",
+  "title": "Headlines",
+  "needs": [{ "unless": "hud.feeds", "message": "Add RSS feeds to hud.json" }],
+  "data": { "news": { "source": "headlines", "error": "Feeds unavailable" } },
+  "layout": {
+    "type": "list",
+    "items": "data.news.items",
+    "as": "h",
+    "gap": 8,
+    "item": {
+      "type": "row",
+      "children": [
+        { "type": "text", "text": "{{ h.source | upper }}", "size": 10, "font": "medium", "color": "accent", "tracking": 0.12, "width": 110 },
+        { "type": "text", "text": "{{ h.title }}", "size": 15, "flex": 1 }
+      ]
+    }
+  }
+}

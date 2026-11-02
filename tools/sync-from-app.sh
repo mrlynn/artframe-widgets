@@ -20,4 +20,7 @@ printf 'Copied from the ArtFrame app repo at %s%s by tools/sync-from-app.sh. Edi
 rm -rf "$here/spec" && mkdir -p "$here/spec"
 cp "$tv/docs/widgets/SPEC.md" "$tv/docs/widgets/widget.schema.json" "$here/spec/"
 cp -R "$tv/docs/widgets/examples" "$here/spec/"
+# The built-ins, so the spec's "copy one and change it" works outside the app repo.
+cp -R "$tv/artframe/app/src/main/assets/widgets" "$here/spec/built-in"
+sed -i.bak 's|(../../artframe/app/src/main/assets/widgets)|(built-in)|; s|`artframe/app/src/main/assets/widgets`|`built-in`|' "$here/spec/SPEC.md" && rm "$here/spec/SPEC.md.bak"
 echo "Parser synced from $commit${dirty:+ (uncommitted changes)}"

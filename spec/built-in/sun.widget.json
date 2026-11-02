@@ -1,0 +1,51 @@
+{
+  "spec": 1,
+  "id": "sun",
+  "name": "Sun and moon",
+  "description": "Sunrise, sunset, daylight and the moon's phase",
+  "icon": "sunrise",
+  "size": "small",
+  "title": "Sun & moon",
+  "data": {
+    "wx": { "source": "weather", "optional": true },
+    "moon": { "source": "moon" }
+  },
+  "layout": {
+    "type": "column",
+    "children": [
+      { "type": "text", "when": "!data.wx.sun", "text": "{{ hud.location ? 'Loading…' : 'Add a location to hud.json' }}", "size": 14, "font": "light", "color": "muted" },
+      {
+        "type": "row",
+        "when": "data.wx.sun",
+        "children": [
+          {
+            "type": "column",
+            "flex": 1,
+            "children": [
+              { "type": "text", "text": "Sunrise", "size": 12, "font": "light", "color": "muted" },
+              { "type": "text", "text": "{{ data.wx.sun.sunrise | time }}", "size": 18, "font": "light", "tabular": true }
+            ]
+          },
+          {
+            "type": "column",
+            "flex": 1,
+            "children": [
+              { "type": "text", "text": "Sunset", "size": 12, "font": "light", "color": "muted" },
+              { "type": "text", "text": "{{ data.wx.sun.sunset | time }}", "size": 18, "font": "light", "tabular": true }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "when": "data.wx.sun && !layout.tight",
+        "before": 6,
+        "text": "{{ data.wx.sun.daylight }} of daylight{{ data.wx.sun.change ? ' · ' + data.wx.sun.change : '' }}",
+        "size": 13,
+        "font": "light",
+        "color": "muted"
+      },
+      { "type": "text", "before": 6, "text": "{{ data.moon.icon }}  {{ data.moon.phase }}", "size": 14 }
+    ]
+  }
+}

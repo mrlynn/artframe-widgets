@@ -1,0 +1,43 @@
+{
+  "spec": 1,
+  "id": "markets",
+  "name": "Markets",
+  "description": "The symbols below, with today's trend",
+  "icon": "chart.line.uptrend.xyaxis",
+  "size": "large",
+  "weight": 1.2,
+  "title": "Markets",
+  "needs": [{ "unless": "hud.markets", "message": "Add symbols to hud.json" }],
+  "data": { "q": { "source": "markets", "error": "Markets unavailable" } },
+  "layout": {
+    "type": "list",
+    "items": "data.q.quotes",
+    "as": "q",
+    "max": 6,
+    "gap": 10,
+    "item": {
+      "type": "row",
+      "children": [
+        {
+          "type": "column",
+          "flex": 1,
+          "children": [
+            { "type": "text", "text": "{{ q.name }}", "size": 14 },
+            { "type": "text", "text": "{{ q.symbol }}", "size": 11, "font": "light", "color": "muted" }
+          ]
+        },
+        { "type": "sparkline", "points": "q.points", "baseline": "q.prevClose", "color": "{{ q.up ? 'up' : 'down' }}", "width": 52, "height": 22, "before": 6 },
+        {
+          "type": "column",
+          "align": "end",
+          "width": 72,
+          "before": 8,
+          "children": [
+            { "type": "text", "text": "{{ q.price | price }}", "size": 14, "tabular": true },
+            { "type": "text", "text": "{{ q.up ? '▲' : '▼' }} {{ q.percent | abs | fixed:2 }}%", "size": 12, "tabular": true, "color": "{{ q.up ? 'up' : 'down' }}" }
+          ]
+        }
+      ]
+    }
+  }
+}

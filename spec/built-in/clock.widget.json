@@ -1,0 +1,23 @@
+{
+  "spec": 1,
+  "id": "clock",
+  "name": "Clock and date",
+  "description": "Large time and today's date",
+  "icon": "clock",
+  "size": "small",
+  "card": false,
+  "layout": {
+    "type": "column",
+    "children": [
+      {
+        "type": "row",
+        "align": "baseline",
+        "children": [
+          { "type": "clock", "format": "h:mm", "format24": "HH:mm", "size": "{{ layout.tight ? 76 : 104 }}", "font": "thin", "tracking": -0.02, "tabular": true },
+          { "type": "clock", "when": "!hud.clock24h", "format": "a", "size": 22, "font": "light", "color": "accent", "before": 8 }
+        ]
+      },
+      { "type": "clock", "format": "EEEE, MMMM d", "format24": "EEEE, d MMMM", "size": "{{ layout.tight ? 18 : 22 }}", "font": "light", "opacity": 0.86 }
+    ]
+  }
+}

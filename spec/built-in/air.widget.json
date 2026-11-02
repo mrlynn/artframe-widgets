@@ -1,0 +1,39 @@
+{
+  "spec": 1,
+  "id": "air",
+  "name": "Air quality",
+  "description": "Air quality index and fine particles (PM2.5)",
+  "icon": "aqi.medium",
+  "size": "small",
+  "title": "Air quality",
+  "needs": [{ "unless": "hud.location", "message": "Add a location to hud.json" }],
+  "data": { "air": { "source": "air", "error": "Air quality unavailable" } },
+  "layout": {
+    "type": "column",
+    "children": [
+      {
+        "type": "row",
+        "children": [
+          { "type": "text", "text": "{{ data.air.aqi }}", "size": 34, "font": "thin" },
+          {
+            "type": "column",
+            "before": 12,
+            "children": [
+              { "type": "text", "text": "{{ data.air.category }}", "size": 16, "color": "{{ data.air.color }}" },
+              { "type": "text", "text": "{{ data.air.index }}", "size": 12, "font": "light", "color": "muted" }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "when": "!layout.tight && (data.air.pm25 != null || data.air.pollen)",
+        "before": 4,
+        "text": "{{ data.air.pm25 != null ? 'PM2.5 ' + (data.air.pm25 | round) + ' µg/m³' : '' }}{{ data.air.pm25 != null && data.air.pollen ? ' · ' : '' }}{{ data.air.pollen ? data.air.pollen.kind + ' pollen ' + (data.air.pollen.count | round) + '/m³' : '' }}",
+        "size": 13,
+        "font": "light",
+        "color": "muted"
+      }
+    ]
+  }
+}
