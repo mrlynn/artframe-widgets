@@ -85,10 +85,19 @@ def check(base=None):
         raw = manifest.read_bytes()
         if len(raw) > MAX_WIDGET_BYTES:
             bad.append(f"widget.json is {len(raw) // 1024} KB; the TV skips files over 64 KB")
+        dupes = []
+
+        def no_dupes(pairs):
+            keys = [k for k, _ in pairs]
+            dupes.extend(sorted({k for k in keys if keys.count(k) > 1}))
+            return dict(pairs)
+
         try:
-            j = json.loads(raw)
+            j = json.loads(raw, object_pairs_hook=no_dupes)
         except ValueError:
             j = {}
+        # JSON lets a key appear twice and the last one wins, which hides mistakes.
+        bad += [f'widget.json has "{k}" twice' for k in dupes]
 
         wid = j.get("id", "")
         if wid != name:
