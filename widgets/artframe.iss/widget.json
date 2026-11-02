@@ -3,11 +3,10 @@
   "spec": 1,
   "id": "artframe.iss",
   "author": "ArtFrame",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "name": "Space station",
   "description": "Where the International Space Station is right now",
   "icon": "globe.americas",
-  "author": "ArtFrame examples",
   "size": "small",
   "title": "Space station",
   "data": {
