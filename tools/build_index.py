@@ -4,6 +4,8 @@
     tools/build_index.py                     # check, then write dist/
     tools/build_index.py --check             # check only (what CI runs on a pull request)
     tools/build_index.py --check --base origin/main   # also insist changed widgets bump their version
+    tools/build_index.py --check --widgets pr/widgets --base-widgets widgets --report r.json
+                                             # CI: check someone else's tree with this copy's rules
 
 Each widget is a folder named after its id, holding widget.json, screenshot.png and
 optionally README.md. The widget itself is checked by the TV's own parser (checker/);
@@ -11,6 +13,7 @@ this script adds the rules for publishing it. Standard library only.
 """
 
 import argparse
+import ipaddress
 import hashlib
 import json
 import os
@@ -19,6 +22,8 @@ import shutil
 import struct
 import subprocess
 import sys
+import zlib
+from urllib.parse import urlsplit
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -33,6 +38,15 @@ RESERVED_PREFIXES = {"test", "example", "local", "my"}
 SEMVER = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
 MAX_WIDGET_BYTES = 64 * 1024  # the TV skips bigger files
 MAX_SCREENSHOT_BYTES = 1024 * 1024
+MAX_SOURCES = 6
+DEFAULT_REFRESH = 900
+# A URL built from the viewer's settings or HUD context sends that data to the site on every
+# fetch, so it mustn't do so more than every 5 minutes.
+MIN_PERSONAL_REFRESH = 300
+PERSONAL = re.compile(r"\b(hud|settings)\.")
+LOCATION = re.compile(r"\bhud\.(location|lat|lon|latitude|longitude|city)|\bsettings\.(lat|lon|latitude|longitude|city|zip|postcode|address|location)\b", re.I)
+SHORTENERS = {"bit.ly", "tinyurl.com", "t.co", "goo.gl", "is.gd", "ow.ly", "buff.ly", "rebrand.ly",
+              "cutt.ly", "shorturl.at", "rb.gy", "tiny.cc", "s.id", "v.gd", "lnkd.in", "t.ly"}
 
 
 def find_java_home():
@@ -104,14 +118,52 @@ def published_before(base, rel):
     return r.stdout if r.returncode == 0 else None
 
 
-def check(base=None):
-    """Returns (entries, problems): index entries for good widgets, and 'id: problem' lines."""
+def secret_settings(j):
+    return {s.get("key") for s in j.get("settings", []) or [] if isinstance(s, dict) and s.get("secret")}
+
+
+def lint_sources(j):
+    """(problems, warnings) about what the widget's sources send where."""
+    bad, warn = [], []
+    data = j.get("data") or {}
+    if not isinstance(data, dict):
+        return bad, warn
+    if len(data) > MAX_SOURCES:
+        bad.append(f"{len(data)} data sources; at most {MAX_SOURCES}")
+    secrets = secret_settings(j)
+    for name, src in data.items():
+        if not isinstance(src, dict):
+            continue
+        url = str(src.get("url", ""))
+        refresh = src.get("refresh", DEFAULT_REFRESH)
+        if PERSONAL.search(url) and isinstance(refresh, (int, float)) and refresh < MIN_PERSONAL_REFRESH:
+            bad.append(f'data.{name}: the URL uses settings or hud values, so "refresh" must be at least {MIN_PERSONAL_REFRESH}')
+        if LOCATION.search(url):
+            warn.append(f"data.{name}: the URL sends the viewer's location to the site")
+        for key in secrets:
+            if key and re.search(r"\bsettings\." + re.escape(key) + r"\b", url):
+                warn.append(f"data.{name}: the URL carries the secret setting {key!r}; send it in a header if the API allows")
+        host = (urlsplit(url.split("{{")[0]).hostname or "").lower().rstrip(".")
+        if host:
+            try:
+                ipaddress.ip_address(host)
+                bad.append(f"data.{name}: use the site's name, not a raw IP address ({host})")
+            except ValueError:
+                pass
+            if host in SHORTENERS:
+                bad.append(f"data.{name}: {host} is a link shortener; use the real site")
+    return bad, warn
+
+
+def check(base=None, base_widgets=None):
+    """Returns (entries, problems, warnings): index entries for good widgets, and 'id: problem' lines."""
     folders = sorted(p for p in WIDGETS.iterdir() if p.is_dir()) if WIDGETS.exists() else []
     stray = sorted(p.name for p in WIDGETS.iterdir() if p.is_file() and p.name != ".gitkeep") if WIDGETS.exists() else []
     problems = [f"widgets/{n}: put each widget in its own folder" for n in stray]
     manifests = [f / "widget.json" for f in folders if (f / "widget.json").is_file()]
     reports = run_checker(manifests) if manifests else {}
     entries = []
+    warnings = []
 
     for folder in folders:
         name = folder.name
@@ -142,6 +194,9 @@ def check(base=None):
             j = {}
         # JSON lets a key appear twice and the last one wins, which hides mistakes.
         bad += [f'widget.json has "{k}" twice' for k in dupes]
+        lint_bad, lint_warn = lint_sources(j) if isinstance(j, dict) else ([], [])
+        bad += lint_bad
+        warnings += [f"{name}: {w}" for w in lint_warn]
 
         wid = j.get("id", "")
         if wid != name:
@@ -158,8 +213,12 @@ def check(base=None):
         if not SEMVER.match(version):
             bad.append('"version" must look like 1.0.0')
 
-        if base and SEMVER.match(version):
-            old = published_before(base, f"widgets/{name}/widget.json")
+        if (base or base_widgets) and SEMVER.match(version):
+            if base_widgets:
+                prev = Path(base_widgets) / name / "widget.json"
+                old = prev.read_text("utf-8", "replace") if prev.is_file() else None
+            else:
+                old = published_before(base, f"widgets/{name}/widget.json")
             if old is not None and old != raw.decode("utf-8", "replace"):
                 try:
                     old_version = str(json.loads(old).get("version", ""))
@@ -202,7 +261,30 @@ def check(base=None):
             "bytes": len(raw),
             "screenshot": f"{wid}/screenshot.png",
         })
-    return entries, problems
+    return entries, problems, warnings
+
+
+PNG_KEEP = {b"IHDR", b"PLTE", b"tRNS", b"IDAT", b"IEND"}
+
+
+def clean_png(src, dst):
+    """Copies a PNG keeping only the chunks needed to draw it, so text, EXIF and other
+    metadata (or anything hidden after IEND) never reaches the gallery."""
+    data = Path(src).read_bytes()
+    out, pos = [data[:8]], 8
+    while pos + 8 <= len(data):
+        length, kind = struct.unpack(">I4s", data[pos:pos + 8])
+        chunk = data[pos:pos + 12 + length]
+        if len(chunk) < 12 + length:
+            fail(f"{src}: truncated PNG")
+        if zlib.crc32(chunk[4:8 + length]) != struct.unpack(">I", chunk[8 + length:])[0]:
+            fail(f"{src}: corrupt PNG chunk {kind!r}")
+        if kind in PNG_KEEP:
+            out.append(chunk)
+        pos += 12 + length
+        if kind == b"IEND":
+            break
+    Path(dst).write_bytes(b"".join(out))
 
 
 def write(entries, out):
@@ -212,7 +294,7 @@ def write(entries, out):
         folder = out / e["id"]
         folder.mkdir(parents=True)
         shutil.copyfile(WIDGETS / e["id"] / "widget.json", out / e["file"])
-        shutil.copyfile(WIDGETS / e["id"] / "screenshot.png", out / e["screenshot"])
+        clean_png(WIDGETS / e["id"] / "screenshot.png", out / e["screenshot"])
     # Published beside the index, so a manifest's "$schema" can point at artframe.mlynn.dev.
     shutil.copyfile(ROOT / "spec" / "widget.schema.json", out / "widget.schema.json")
     parser = (CHECKER / "src/main/kotlin/vendor/FROM.txt").read_text().split(" at ")[1].split(" ")[0]
@@ -224,10 +306,24 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--check", action="store_true", help="check only; don't write dist/")
     ap.add_argument("--base", help="git ref of what's published, to insist changed widgets bump their version")
+    ap.add_argument("--base-widgets", help="a folder of the published widgets, instead of --base")
+    ap.add_argument("--widgets", help="check this widgets folder instead of the one beside this script")
+    ap.add_argument("--report", help="write {id: {sites, version}} for passing widgets to this file")
     ap.add_argument("--out", default=str(ROOT / "dist"))
     args = ap.parse_args()
 
-    entries, problems = check(args.base)
+    global WIDGETS
+    if args.widgets:
+        WIDGETS = Path(args.widgets).resolve()
+    entries, problems, warnings = check(args.base, args.base_widgets)
+    for w in warnings:
+        print(f"! {w}", file=sys.stderr)
+    if args.report:
+        Path(args.report).write_text(json.dumps({
+            "widgets": {e["id"]: {"sites": e["sites"], "version": e["version"]} for e in entries},
+            "problems": problems,
+            "warnings": warnings,
+        }, indent=2) + "\n")
     for p in problems:
         print(f"✗ {p}", file=sys.stderr)
     if problems:

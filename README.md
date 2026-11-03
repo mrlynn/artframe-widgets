@@ -21,10 +21,13 @@ and use **Add Widget…**.
 | `widgets/<id>/` | One widget: `widget.json`, `screenshot.png` and an optional `README.md` |
 | `spec/` | The widget spec, its JSON Schema and examples, copied from the app |
 | `checker/` | The TV's own widget parser, run on a desktop JVM to check widgets |
-| `tools/` | `build_index.py` checks every widget and writes the published index; `sync-from-app.sh` refreshes `spec/` and `checker/` from the app |
+| `tools/` | `build_index.py` checks every widget and writes the published index; `check_pr.py` holds pull requests to the ownership rules; `sync-from-app.sh` refreshes `spec/` and `checker/` from the app |
 
-Every pull request is checked by CI (`.github/workflows/check.yml`): the widget must load
-on the TV, and it must follow the rules in [CONTRIBUTING.md](CONTRIBUTING.md).
+Every pull request is checked by CI: the widget must load on the TV, and it must follow
+the rules in [CONTRIBUTING.md](CONTRIBUTING.md). The check that guards merging
+(`.github/workflows/policy.yml`) runs the base branch's tools against the pull request's
+widgets, so a pull request can't change the rules it's held to. `owners.json` maps each
+id prefix to the GitHub logins that own it. See [SECURITY.md](SECURITY.md).
 
 ## How a merged widget reaches people
 

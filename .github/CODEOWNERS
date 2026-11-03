@@ -1,0 +1,7 @@
+# Every change needs a maintainer's review (with "Require review from Code Owners" on).
+*                @mrlynn
+/.github/        @mrlynn
+/tools/          @mrlynn
+/checker/        @mrlynn
+/spec/           @mrlynn
+/owners.json     @mrlynn
