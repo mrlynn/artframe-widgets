@@ -6,6 +6,14 @@
     tools/build_index.py --check --base origin/main   # also insist changed widgets bump their version
     tools/build_index.py --check --widgets pr/widgets --base-widgets widgets --report r.json
                                              # CI: check someone else's tree with this copy's rules
+    tools/build_index.py --require-signature          # publishing: no key, no index
+
+The index is signed (dist/index.json.sig: Ed25519 over index.json's exact bytes, base64) with the
+key in ARTFRAME_INDEX_SIGNING_KEY: the base64 key itself (the CI secret) or the path of a file
+holding it (local builds). Without it the index is written unsigned, with a warning; the Mac app
+won't trust an unsigned index. It carries "issuedAt" and "expires" (30 days on) so an old copy
+can't be passed off as current, and "revoked" from revoked.json, which turns those widgets off
+wherever they're installed.
 
 Each widget is a folder named after its id, holding widget.json, screenshot.png and
 optionally README.md. The widget itself is checked by the TV's own parser (checker/);
@@ -13,6 +21,8 @@ this script adds the rules for publishing it. Standard library only.
 """
 
 import argparse
+import base64
+import datetime
 import ipaddress
 import hashlib
 import json
@@ -26,6 +36,8 @@ import zlib
 from urllib.parse import urlsplit
 from pathlib import Path
 
+import ed25519
+
 ROOT = Path(__file__).resolve().parent.parent
 WIDGETS = ROOT / "widgets"
 CHECKER = ROOT / "checker"
@@ -33,7 +45,10 @@ CHECKER = ROOT / "checker"
 WARNINGS: list[str] = []
 CHECKER_BIN = CHECKER / "build" / "install" / "checker" / "bin" / "checker"
 
-INDEX_FORMAT = 1
+INDEX_FORMAT = 2
+VALID_DAYS = 30
+KEY_ENV = "ARTFRAME_INDEX_SIGNING_KEY"
+REVOKED = ROOT / "revoked.json"
 ALLOWED_FILES = {"widget.json", "screenshot.png", "README.md"}
 # Prefixes people already use for local widgets, so a published one never collides with them.
 RESERVED_PREFIXES = {"test", "example", "local", "my"}
@@ -292,7 +307,71 @@ def clean_png(src, dst):
     Path(dst).write_bytes(b"".join(out))
 
 
-def write(entries, out):
+def load_revoked():
+    """(revocations, problems) from revoked.json: [{"id", "versions": "*" or ["1.0.0"], "reason"}]."""
+    if not REVOKED.exists():
+        return [], []
+    try:
+        items = json.loads(REVOKED.read_text())["revoked"]
+    except (ValueError, KeyError, TypeError) as e:
+        return [], [f"revoked.json: can't read it ({e})"]
+    out, problems = [], []
+    for i, r in enumerate(items):
+        where = f"revoked.json: entry {i + 1}"
+        if not isinstance(r, dict) or not isinstance(r.get("id"), str) or not r["id"].strip():
+            problems.append(f'{where} needs an "id"')
+            continue
+        versions = r.get("versions", "*")
+        if versions != "*" and not (isinstance(versions, list) and versions and all(isinstance(v, str) and SEMVER.match(v) for v in versions)):
+            problems.append(f'{where} ({r["id"]}): "versions" is "*" or a list like ["1.0.0"]')
+            continue
+        if not str(r.get("reason", "")).strip():
+            problems.append(f'{where} ({r["id"]}): say why in "reason"; people see it')
+            continue
+        out.append({"id": r["id"].strip().lower(), "versions": versions, "reason": r["reason"].strip()})
+    return out, problems
+
+
+def is_revoked(revoked, wid, version):
+    return any(r["id"] == wid and (r["versions"] == "*" or version in r["versions"]) for r in revoked)
+
+
+def load_key():
+    """The signing key's 32 bytes from ARTFRAME_INDEX_SIGNING_KEY, or None when it isn't set.
+    Never printed: errors name the variable, not its value."""
+    value = os.environ.get(KEY_ENV, "").strip()
+    if not value:
+        return None
+    if os.path.isfile(os.path.expanduser(value)):
+        value = Path(os.path.expanduser(value)).read_text().strip()
+    try:
+        seed = base64.b64decode(value, validate=True)
+    except ValueError:
+        seed = b""
+    if len(seed) != 32:
+        sys.exit(f"✗ {KEY_ENV} isn't a base64 Ed25519 key (32 bytes) or a file holding one")
+    return seed
+
+
+def signed_index(entries, revoked, parser, key, now):
+    """(index bytes, signature or None). The bytes are signed exactly as written."""
+    index = {
+        "format": INDEX_FORMAT,
+        "checkedWith": parser,
+        "issuedAt": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "expires": (now + datetime.timedelta(days=VALID_DAYS)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "revoked": revoked,
+        "widgets": sorted(entries, key=lambda e: e["name"].lower()),
+    }
+    data = (json.dumps(index, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
+    if key is None:
+        return data, None
+    sig = ed25519.sign(key, data)
+    assert ed25519.verify(ed25519.public_key(key), data, sig)
+    return data, base64.b64encode(sig) + b"\n"
+
+
+def write(entries, revoked, out, key, now=None):
     if out.exists():
         shutil.rmtree(out)
     for e in entries:
@@ -303,8 +382,10 @@ def write(entries, out):
     # Published beside the index, so a manifest's "$schema" can point at artframe.mlynn.dev.
     shutil.copyfile(ROOT / "spec" / "widget.schema.json", out / "widget.schema.json")
     parser = (CHECKER / "src/main/kotlin/vendor/FROM.txt").read_text().split(" at ")[1].split(" ")[0]
-    index = {"format": INDEX_FORMAT, "checkedWith": parser, "widgets": sorted(entries, key=lambda e: e["name"].lower())}
-    (out / "index.json").write_text(json.dumps(index, indent=2, ensure_ascii=False) + "\n")
+    data, sig = signed_index(entries, revoked, parser, key, now or datetime.datetime.now(datetime.timezone.utc))
+    (out / "index.json").write_bytes(data)
+    if sig:
+        (out / "index.json.sig").write_bytes(sig)
 
 
 def main():
@@ -315,12 +396,19 @@ def main():
     ap.add_argument("--widgets", help="check this widgets folder instead of the one beside this script")
     ap.add_argument("--report", help="write {id: {sites, version}} for passing widgets to this file")
     ap.add_argument("--out", default=str(ROOT / "dist"))
+    ap.add_argument("--require-signature", action="store_true", help=f"fail when {KEY_ENV} isn't set")
     args = ap.parse_args()
 
     global WIDGETS
     if args.widgets:
         WIDGETS = Path(args.widgets).resolve()
     entries, problems, warnings = check(args.base, args.base_widgets)
+    revoked, bad = load_revoked()
+    problems += bad
+    # A withdrawn version is never published again.
+    for e in [e for e in entries if is_revoked(revoked, e["id"], e["version"])]:
+        warnings.append(f"{e['id']} {e['version']}: revoked, so it's left out of the index")
+        entries.remove(e)
     # The checker's text warnings (TextLint) join the publishing ones.
     warnings += [f"{w} (review; doesn't fail the check)" for w in WARNINGS]
     for w in warnings:
@@ -336,9 +424,16 @@ def main():
     if problems:
         sys.exit(1)
     print(f"✓ {len(entries)} widget(s) pass")
+    if revoked:
+        print(f"✓ {len(revoked)} revoked widget(s) listed")
     if not args.check:
-        write(entries, Path(args.out))
-        print(f"Wrote {args.out}/index.json")
+        key = load_key()
+        if key is None:
+            if args.require_signature:
+                sys.exit(f"✗ {KEY_ENV} isn't set, so the index can't be signed")
+            print(f"! {KEY_ENV} isn't set: writing an unsigned index, which the Mac app won't trust", file=sys.stderr)
+        write(entries, revoked, Path(args.out), key)
+        print(f"Wrote {args.out}/index.json" + (f" (signed by key {base64.b64encode(ed25519.public_key(key)).decode()})" if key else ""))
 
 
 if __name__ == "__main__":
