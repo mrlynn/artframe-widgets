@@ -31,6 +31,8 @@ jobs:
       - name: Build the checker
         working-directory: checker
         run: ./gradlew -q installDist
+      - name: Test the index tools
+        run: python3 -m unittest discover -s tools
       - name: Check
         env:
           EVENT: ${{ github.event_name }}

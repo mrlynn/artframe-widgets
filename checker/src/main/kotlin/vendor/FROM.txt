@@ -1,1 +1,1 @@
-Copied from the ArtFrame app repo at 5c6f794 by tools/sync-from-app.sh. Edit the app, not these.
+Copied from the ArtFrame app repo at fd51f0e by tools/sync-from-app.sh. Edit the app, not these.

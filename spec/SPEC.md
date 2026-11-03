@@ -152,7 +152,7 @@ weather cost one request.
 | --- | --- |
 | `url` | `https://`, with the site written out (Android turns down plain `http://`). A [template](#templates) after that, so it can use settings: `"https://example.com/q?city={{ settings.city \| url }}"`. See [Which sites a widget contacts](#which-sites-a-widget-contacts). |
 | `format` | `json` (the default), `rss` (RSS 2.0 or Atom) or `text`. |
-| `refresh` | Seconds between fetches, 60-86400. Default 900 (15 minutes). |
+| `refresh` | Seconds between fetches, 60-86400. Default 900 (15 minutes). At least 300 when the `url` or `headers` use any `hud.` or `settings.` value, so a widget can't send your city or settings to its site every minute; a lower value is an error. |
 | `headers` | Request headers, as templates: `{ "Authorization": "Bearer {{ settings.token }}" }` |
 
 What you get:
@@ -185,9 +185,40 @@ turn a widget on, and the TV refuses to contact any other.
   None of their other data goes with it: the `headers` must be plain text, and
   [secret](#settings) settings stay hidden.
 
-Redirects are followed, up to 5, as long as they stay on `https`. The
+The site has to be a name on the internet: an IP address (`https://192.168.1.4/`),
+`localhost`, a `.local` name or a link shortener (`bit.ly`, `tinyurl.com`, `t.co`
+and the like) is an error, so a widget can't reach your home network or hide
+where it goes. The same goes for a site the person types in: the TV won't
+contact one of those.
+
+Redirects are followed, up to 3, only on the same `https` site: a redirect to
+any other host, even a subdomain, fails the fetch. The
 `headers` go only to the site the URL names. Widgets can't load
 images or anything else from the web: all a widget contacts are its sources.
+
+What each site gets is said in one sentence per site, the same in the Mac app
+and the gallery: "Sends your city and your API key to api.example.com." or
+"Contacts api.example.com, sending nothing about you." A [secret](#settings)
+setting in the `url` rather than a header also says "Your API key goes in the
+web address, so it may show up in api.example.com's logs": put keys in
+`headers` when the API allows it.
+
+**Updates are asked about again.** When a new version of a widget contacts a
+site the old one didn't, sends a site more of your data, lets you choose a
+site, or moves an API key into a web address, the Mac app lists exactly what's
+new and installs it only once you allow it. The sites you allowed are kept in
+`hud.json` under the widget's id:
+
+```json
+"consentedSites": {
+  "example.weather": ["api.example.com"]
+}
+```
+
+The TV contacts no fixed site that isn't listed there for that widget, so a
+widget file changed some other way can't reach a new site; the Mac app shows
+such a widget with a "Review…" button. A widget with no entry (added before
+ArtFrame recorded this) isn't limited.
 
 ### Built-in providers
 
@@ -463,13 +494,34 @@ the weather with no city), for `optional` sources.
 ## Limits
 
 - A widget file is at most 64 KB, with at most 400 layout nodes, 20 deep.
-- HTTP sources: `https` only, 512 KB per response, at most one fetch a
+- At most 6 HTTP data sources per widget (built-in providers don't count).
+  A widget with more isn't loaded.
+- HTTP sources whose `url` or `headers` use `hud.` or `settings.` values
+  refresh at most every 300 seconds; a lower `refresh` is an error.
+- Each widget makes at most 60 HTTP fetches in any hour. Past that the TV
+  skips fetches (keeping the last data) until the hour rolls on, and a source
+  that keeps failing waits twice as long after each failure, up to an hour.
+- HTTP sources: `https` only, a DNS name (no IP addresses, `localhost`,
+  `.local` or link shorteners), up to 3 redirects within the same host, 512 KB per response, at most one fetch a
   minute per source.
 - Lists draw at most 200 items.
 - A card doesn't scroll or shrink its text: what doesn't fit is cut off at
   the card's edge. Large cards are about 230 dp tall next to each other, and
   less with a wide row; use `max` on lists and `lines` on text to fit.
 - No scripts, no images (yet), no tapping: the TV is a screensaver.
+- Text is capped at 500 characters, and at 200 inside a list item; longer
+  text ends in `…`. Control characters and bidi overrides (which can make
+  text read backwards) are removed from every value a template shows.
+
+### Text is just text
+
+Text in a widget is shown, never acted on. The TV never turns it into a
+link, a QR code, a phone number to dial or anything else a viewer can use,
+however it's written. A widget mustn't ask viewers to scan, call, text or
+visit anything, in its own words or by showing such text from an API: a big
+screen in someone's home is a tempting place for a scam. The gallery checker
+warns about phone numbers, web addresses and "scan" or "call" wording in a
+widget's own text, and a reviewer reads each one.
 
 A file that breaks a rule isn't loaded. The TV logs why (`adb logcat -s
 WidgetCatalog`), and the Mac app shows it next to the widget.

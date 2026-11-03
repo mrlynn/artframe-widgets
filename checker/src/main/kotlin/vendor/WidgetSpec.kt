@@ -65,6 +65,17 @@ data class WidgetSpec(
         private val TOP = setOf("spec", "id", "name", "description", "icon", "size", "card", "weight", "title", "settings", "data", "needs", "layout", "author", "version", "homepage", "\$schema")
         private const val MAX_NODES = 400
         private const val MAX_DEPTH = 20
+        /** HTTP sources per widget (docs/widgets/SPEC.md, Limits). Built-in providers don't count. */
+        const val MAX_HTTP_SOURCES = 6
+        /** The shortest refresh for a source whose url or headers use `hud.` or `settings.` values. */
+        const val PERSONAL_MIN_REFRESH = 300
+        /** A `hud` or `settings` reference in a template, as the Mac app's WidgetManifest finds them. */
+        private val PERSONAL_REF = Regex("""\b(hud|settings)\b""")
+
+        /** Whether [templates] put any of the person's values (HUD settings or the widget's) into a request. */
+        fun usesPersonalData(templates: Iterable<String>): Boolean = templates.any { t ->
+            Regex("""\{\{(.*?)\}\}""", RegexOption.DOT_MATCHES_ALL).findAll(t).any { PERSONAL_REF.containsMatchIn(it.groupValues[1]) }
+        }
         /** The text before any `{{`: https and a host, then the path, query or the end. */
         private val LITERAL_URL = Regex("""(https)://([A-Za-z0-9.-]+)(:[0-9]{1,5})?([/?#][^\{]*)?""")
         /** A url that's nothing but one setting: `{{ settings.feed }}`. */
@@ -86,7 +97,9 @@ data class WidgetSpec(
             if (literal.length < url.length && m.groupValues[4].isEmpty()) {
                 throw IllegalArgumentException("put a / (or ?) after the site, before any {{ }}")
             }
-            return m.groupValues[2].lowercase()
+            val host = m.groupValues[2].lowercase()
+            HostPolicy.problem(host)?.let { throw IllegalArgumentException(it) }
+            return host
         }
 
         private val COMMON = setOf("type", "when", "flex", "width", "height", "before")
@@ -152,6 +165,8 @@ data class WidgetSpec(
                 if (!KEY.matches(name)) problems += "data \"$name\" needs a name like \"main\""
                 name to source(name, v as? Map<*, *>, settings, problems)
             }
+            val httpCount = data.values.count { it.kind == "http" }
+            if (httpCount > MAX_HTTP_SOURCES) problems += "At most $MAX_HTTP_SOURCES HTTP data sources; this widget has $httpCount"
 
             val needs = (j["needs"] as? List<*> ?: emptyList<Any?>()).mapNotNull { n ->
                 val m = n as? Map<*, *>
@@ -221,12 +236,16 @@ data class WidgetSpec(
                     if (chosen && "{{" in it) problems += "data \"$name\": headers can't use {{ }} when the url is a setting"
                 }
             } ?: emptyMap()
+            val declared = (m?.get("refresh") as? Number)?.toInt()
+            if (kind == "http" && url != null && usesPersonalData(listOf(url) + headers.values) && declared != null && declared < PERSONAL_MIN_REFRESH) {
+                problems += "data \"$name\": \"refresh\" must be at least $PERSONAL_MIN_REFRESH when the url or headers use hud. or settings. values"
+            }
             return Source(
                 kind = kind ?: "http",
                 url = url,
                 host = host,
                 format = format,
-                refreshSeconds = (m?.get("refresh") as? Number)?.toInt()?.coerceIn(60, 86_400) ?: 900,
+                refreshSeconds = declared?.coerceIn(60, 86_400) ?: 900,
                 headers = headers,
                 loading = m?.get("loading") as? String ?: "Loading…",
                 error = m?.get("error") as? String ?: "Couldn't load",

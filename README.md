@@ -49,10 +49,13 @@ on `PATH`).
 
 ```bash
 tools/build_index.py --check          # check every widget
-tools/build_index.py                  # check, then write dist/
+tools/build_index.py                  # check, then write dist/ (unsigned, with a warning)
+ARTFRAME_INDEX_SIGNING_KEY=~/.artframe-keys/index-signing-current.key tools/build_index.py
+                                      # signed, as CI does it
+python3 -m unittest discover -s tools # the index tools' own tests
 ```
 
-`dist/` holds `index.json`, each widget at `<id>/<version>.widget.json`, its
+`dist/` holds `index.json`, its signature `index.json.sig`, each widget at `<id>/<version>.widget.json`, its
 screenshot, and `widget.schema.json`. You only need to build it locally to preview; CI
 publishes it.
 
@@ -60,8 +63,11 @@ publishes it.
 
 ```json
 {
-  "format": 1,
+  "format": 2,
   "checkedWith": "d4c793d",
+  "issuedAt": "2026-11-03T15:00:00Z",
+  "expires": "2026-12-03T15:00:00Z",
+  "revoked": [{"id": "someone.widget", "versions": "*", "reason": "…"}],
   "widgets": [{
     "id": "artframe.github", "name": "GitHub repository", "description": "…",
     "icon": "star", "size": "small", "author": "ArtFrame", "version": "1.0.0",
@@ -78,3 +84,19 @@ publishes it.
 - `needsKey`: it has a secret setting, such as an API key.
 - `file` and `screenshot` are relative to the index. Check `sha256` after downloading.
 - `checkedWith`: the app commit whose parser checked these widgets.
+- `issuedAt`, `expires`: when it was built, and 30 days on. ArtFrameRemote still shows an
+  expired index but won't install from it, and refuses one older than the last it saw.
+- `revoked`: from `revoked.json`. ArtFrameRemote turns those widgets off on the TV (matched
+  by id, so sideloaded copies too; `versions` is `"*"` or a list) and offers to remove them.
+  A revoked version is also left out of `widgets`.
+
+### Signing
+
+`index.json.sig` is the base64 Ed25519 signature of `index.json`'s exact bytes.
+ArtFrameRemote checks it against two public keys built into the app (current and backup)
+and rejects an index that fails, so changing anything in it, or serving it from anywhere
+but `artframe.mlynn.dev`, stops it being used. `publish.yml` signs with the
+`ARTFRAME_INDEX_SIGNING_KEY` repository secret (the base64 private key) and fails rather
+than publish unsigned. Locally the variable can be the key or a path to a file holding it.
+If the current key is lost or leaks, sign with the backup key and ship an app with a new
+backup.
