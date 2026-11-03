@@ -155,6 +155,8 @@ def check(base=None):
             "spec": j["spec"],
             "sites": report["hosts"],
             "choosesSite": report["chosenSite"],
+            # What of the person's each site gets, worded as the Mac app shows it; the Mac checks the file against it.
+            "sends": report["sends"],
             "needsKey": any(s.get("secret") for s in settings),
             "file": f"{wid}/{version}.widget.json",
             "sha256": hashlib.sha256(raw).hexdigest(),
