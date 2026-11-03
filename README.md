@@ -23,13 +23,26 @@ and use **Add Widget…**.
 | `checker/` | The TV's own widget parser, run on a desktop JVM to check widgets |
 | `tools/` | `build_index.py` checks every widget and writes the published index; `sync-from-app.sh` refreshes `spec/` and `checker/` from the app |
 
-Every pull request is checked by CI: the widget must load on the TV, and it must follow
-the rules in [CONTRIBUTING.md](CONTRIBUTING.md). When it merges, the index at
-`https://artframe.mlynn.dev/widgets/index.json` is rebuilt from `main`.
+Every pull request is checked by CI (`.github/workflows/check.yml`): the widget must load
+on the TV, and it must follow the rules in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## How a merged widget reaches people
+
+1. On every push to `main`, `.github/workflows/publish.yml` checks the widgets, builds
+   `dist/` and deploys it to GitHub Pages at `https://mrlynn.github.io/artframe-widgets/`.
+2. The site rewrites `artframe.mlynn.dev/widgets/index.json`, `widget.schema.json` and
+   `/widgets/<id>/…` to that copy, so the published index is current within minutes, with
+   no manual sync.
+3. ArtFrameRemote fetches the index when someone opens **Display › Widgets › Browse
+   Gallery…**. It doesn't poll, and nothing installs itself: a person picks a widget (or an
+   update, when the gallery has a newer `version`), and it goes to the TV with the next
+   **Save**. The TV never reads the index.
 
 ## Building the index
 
-Needs JDK 17 and Python 3; nothing else.
+Needs JDK 17 and Python 3; nothing else. The script finds JDK 17 itself (`JAVA_HOME`,
+then `/usr/libexec/java_home -v 17` on macOS, then Homebrew's `openjdk@17`, then `java`
+on `PATH`).
 
 ```bash
 tools/build_index.py --check          # check every widget
@@ -37,8 +50,8 @@ tools/build_index.py                  # check, then write dist/
 ```
 
 `dist/` holds `index.json`, each widget at `<id>/<version>.widget.json`, its
-screenshot, and `widget.schema.json`. The site copies it to `artframe.mlynn.dev/widgets/`
-with `npm run sync-widgets`.
+screenshot, and `widget.schema.json`. You only need to build it locally to preview; CI
+publishes it.
 
 ### index.json
 
