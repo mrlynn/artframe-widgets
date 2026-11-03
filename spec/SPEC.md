@@ -528,9 +528,9 @@ WidgetCatalog`), and the Mac app shows it next to the widget.
 
 ## Installing and testing
 
-**With the Mac app**: Display › Widgets › Add Widget… copies a
+**With the Mac app**: Screen › Cards › Add Widget… copies a
 `.widget.json` into the data folder's `widgets` folder, checks it, and lists
-it with the built-ins. Turn it on, fill in its settings, and Save: the
+it with the built-ins. Turn it on, fill in its settings, and click Apply to TV: the
 widgets folder goes to the TV with `hud.json`.
 
 **From the command line**:

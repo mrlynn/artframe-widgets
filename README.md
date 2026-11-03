@@ -7,7 +7,7 @@ lines, and can only contact the sites it names.
 
 ## Installing one
 
-In ArtFrameRemote on your Mac, open **Display › Widgets**, find the widget and add it.
+In ArtFrameRemote on your Mac, open **Screen › Cards**, click **Browse Gallery…**, find the widget and add it.
 The app shows which sites the widget contacts, and what of yours it sends there, before
 you turn it on.
 
@@ -36,10 +36,10 @@ id prefix to the GitHub logins that own it. See [SECURITY.md](SECURITY.md).
 2. The site rewrites `artframe.mlynn.dev/widgets/index.json`, `widget.schema.json` and
    `/widgets/<id>/…` to that copy, so the published index is current within minutes, with
    no manual sync.
-3. ArtFrameRemote fetches the index when someone opens **Display › Widgets › Browse
+3. ArtFrameRemote fetches the index when someone opens **Screen › Cards › Browse
    Gallery…**. It doesn't poll, and nothing installs itself: a person picks a widget (or an
    update, when the gallery has a newer `version`), and it goes to the TV with the next
-   **Save**. The TV never reads the index.
+   **Apply to TV**. The TV never reads the index.
 
 ## Building the index
 
