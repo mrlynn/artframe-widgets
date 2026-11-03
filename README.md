@@ -17,6 +17,7 @@
 <p align="center">
   <a href="#the-gallery"><b>See the widgets</b></a> ·
   <a href="#write-your-own-in-one-file"><b>Write your own</b></a> ·
+  <a href="docs/build-with-ai.md"><b>Build one with AI</b></a> ·
   <a href="spec/SPEC.md"><b>Read the spec</b></a> ·
   <a href="https://artframe.mlynn.dev"><b>Get ArtFrame</b></a>
 </p>
@@ -147,6 +148,13 @@ Add a `data` block to pull JSON from any public API and you have a live card. Th
 [testing on your own TV](spec/SPEC.md#installing-and-testing). The
 [examples](spec/examples) and the [built-ins](spec/built-in) are good starting points.
 
+### Or have an AI build it
+
+Claude Code, Codex, Cursor, ChatGPT and the rest can write a widget from the spec.
+[Build a widget with AI](docs/build-with-ai.md) has prompts to paste in, and
+[AGENTS.md](AGENTS.md) gives a coding agent working in this repository the rules it
+needs, including running the TV's own check on what it writes.
+
 When it works on your TV, [send it in](CONTRIBUTING.md): one folder, one pull request, and
 CI tells you within minutes whether the TV will load it.
 
@@ -170,6 +178,7 @@ More in [SECURITY.md](SECURITY.md).
 | `spec/` | The widget spec, its JSON Schema and examples, copied from the app |
 | `checker/` | The TV's own widget parser, run on a desktop JVM to check widgets |
 | `tools/` | `build_index.py` checks every widget and writes the published index; `check_pr.py` holds pull requests to the ownership rules; `sync-from-app.sh` refreshes `spec/` and `checker/` from the app |
+| `docs/build-with-ai.md`, `AGENTS.md` | Prompts for building a widget with an AI assistant, and the rules a coding agent reads in this repository |
 | `docs/readme/` | This page's banner: `banner.html` and `render.sh`, which renders it to `banner.png` |
 
 Every pull request is checked by CI: the widget must load on the TV, and it must follow
