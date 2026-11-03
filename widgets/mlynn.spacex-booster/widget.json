@@ -1,0 +1,53 @@
+{
+  "$schema": "https://artframe.mlynn.dev/widgets/widget.schema.json",
+  "spec": 1,
+  "id": "mlynn.spacex-booster",
+  "author": "mlynn",
+  "version": "1.0.0",
+  "name": "Next SpaceX launch",
+  "description": "The next SpaceX launch, with the booster flying it, how many times it has flown and where it will land (Launch Library 2)",
+  "icon": "arrow.up.circle",
+  "size": "small",
+  "title": "Next SpaceX launch",
+  "data": {
+    "sx": {
+      "source": "http",
+      "url": "https://ll.thespacedevs.com/2.2.0/launch/upcoming/?lsp__name=SpaceX&limit=1&mode=detailed",
+      "refresh": 3600,
+      "error": "Launch schedule unavailable"
+    }
+  },
+  "layout": {
+    "type": "list",
+    "items": "data.sx.results",
+    "as": "r",
+    "max": 1,
+    "empty": "Nothing scheduled",
+    "item": {
+      "type": "column",
+      "children": [
+        { "type": "text", "text": "{{ r.mission.name || r.name }}", "size": 20, "font": "light" },
+        { "type": "text", "text": "{{ r.rocket.configuration.name }} · {{ r.net | day }} {{ r.net | time }} · {{ r.status.abbrev }}", "size": 13, "color": "muted" },
+        {
+          "type": "list",
+          "items": "r.rocket.launcher_stage",
+          "as": "s",
+          "max": 3,
+          "before": 8,
+          "gap": 2,
+          "item": {
+            "type": "row",
+            "align": "baseline",
+            "children": [
+              { "type": "text", "text": "{{ s.launcher.serial_number }}", "size": 18, "font": "medium", "color": "accent", "tabular": true },
+              { "type": "text", "before": 8, "flex": 1, "size": 13, "tabular": true,
+                "text": "{{ s.launcher_flight_number ? 'flight ' + s.launcher_flight_number : (s.reused ? 'reflown' : 'new booster') }}{{ s.landing && s.landing.location ? ' → ' + s.landing.location.abbrev : '' }}" }
+            ]
+          }
+        },
+        { "type": "text", "before": 4, "size": 11, "font": "light", "color": "muted", "when": "r.rocket.configuration.consecutive_successful_landings",
+          "text": "{{ r.rocket.configuration.consecutive_successful_landings | number:0 }} landings in a row · {{ r.pad.location.name | truncate:32 }}" }
+      ]
+    }
+  }
+}

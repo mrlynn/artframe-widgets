@@ -1,37 +1,49 @@
 name: Check widgets
 
+# The pull request's own copy of the tools, for quick feedback (and to test changes to tools/
+# or checker/). It runs untrusted code with a read-only token and no secrets, and a pull request
+# can edit this file, so it's advisory: the check that guards merging is "Pull request rules"
+# (policy.yml), which runs the base branch's tools.
+
 on:
   pull_request:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0 # so --base can compare with what's published
-      - uses: actions/setup-java@v4
+          persist-credentials: false
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
         with:
           distribution: temurin
           java-version: "17"
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Build the checker
         working-directory: checker
         run: ./gradlew -q installDist
       - name: Check
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
         run: |
-          if [ "${{ github.event_name }}" = pull_request ]; then
-            tools/build_index.py --check --base "origin/${{ github.base_ref }}"
+          if [ "$EVENT" = pull_request ]; then
+            tools/build_index.py --check --base "origin/$BASE_REF"
           else
             tools/build_index.py
           fi
       - name: Keep the built index
         if: github.event_name == 'push'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: widgets-index
           path: dist/
