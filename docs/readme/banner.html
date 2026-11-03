@@ -1,0 +1,104 @@
+<!doctype html>
+<!-- Source for banner.png. Regenerate with docs/readme/render.sh. -->
+<html>
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Atkinson+Hyperlegible+Next:wght@400;600;700&display=block" rel="stylesheet">
+<style>
+  :root {
+    --graphite: #151b24; --graphite-2: #1c2430;
+    --ivory: #f6f4ef; --ivory-dim: #c9c6bf; --muted: #8e96a3;
+    --coral: #ff825d; --cyan: #38ddf2; --lavender: #a68ad9;
+    --line: #f6f4ef1a; --line-strong: #f6f4ef2e;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { width: 1280px; height: 460px; overflow: hidden; background: var(--graphite); }
+  body {
+    position: relative;
+    font: 400 17px/1.5 "Atkinson Hyperlegible Next", sans-serif;
+    color: var(--ivory);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* The "painting" the cards sit on: a dusk sky, the way the HUD sits over art on the TV. */
+  .art {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(60% 70% at 78% 18%, #ff825d55 0%, transparent 60%),
+      radial-gradient(45% 60% at 98% 70%, #a68ad966 0%, transparent 65%),
+      radial-gradient(40% 50% at 52% 95%, #38ddf233 0%, transparent 70%),
+      radial-gradient(35% 45% at 66% 50%, #e9b45a33 0%, transparent 70%),
+      linear-gradient(160deg, #1d2333 0%, #2a2440 45%, #3a2a3c 70%, #1b2230 100%);
+  }
+  .stars {
+    position: absolute; inset: 0;
+    background-image:
+      radial-gradient(1.2px 1.2px at 12% 22%, #fff9 50%, transparent 51%),
+      radial-gradient(1px 1px at 33% 12%, #fff7 50%, transparent 51%),
+      radial-gradient(1.4px 1.4px at 58% 8%, #fffa 50%, transparent 51%),
+      radial-gradient(1px 1px at 71% 30%, #fff6 50%, transparent 51%),
+      radial-gradient(1.2px 1.2px at 88% 14%, #fff9 50%, transparent 51%),
+      radial-gradient(1px 1px at 94% 42%, #fff6 50%, transparent 51%),
+      radial-gradient(1.3px 1.3px at 46% 36%, #fff8 50%, transparent 51%),
+      radial-gradient(1px 1px at 63% 62%, #fff5 50%, transparent 51%),
+      radial-gradient(1px 1px at 81% 84%, #fff6 50%, transparent 51%),
+      radial-gradient(1.2px 1.2px at 53% 78%, #fff7 50%, transparent 51%);
+  }
+  .grain {
+    position: absolute; inset: 0; opacity: .14; mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+  /* Darken the left so the type reads, fading into the art. */
+  .scrim {
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, var(--graphite) 0%, var(--graphite) 34%, #151b24cc 46%, #151b2400 64%);
+  }
+
+  .copy { position: absolute; left: 64px; top: 0; bottom: 0; width: 520px;
+          display: flex; flex-direction: column; justify-content: center; }
+  .eyebrow { font: 700 13px/1 "Atkinson Hyperlegible Next", sans-serif; letter-spacing: .2em;
+             text-transform: uppercase; color: var(--coral); margin-bottom: 22px; }
+  h1 { font: 400 56px/1.04 "Young Serif", Georgia, serif; letter-spacing: -.01em; }
+  h1 em { font-style: normal; color: var(--coral); }
+  .sub { margin-top: 20px; font-size: 19px; line-height: 1.5; color: var(--ivory-dim); max-width: 470px; }
+  .pills { display: flex; gap: 10px; margin-top: 26px; }
+  .pill { font: 600 13px/1 "Atkinson Hyperlegible Next", sans-serif; padding: 9px 13px;
+          border-radius: 999px; border: 1px solid var(--line-strong); color: var(--ivory);
+          background: #f6f4ef0a; display: flex; align-items: center; gap: 8px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; }
+
+  .card { position: absolute; border-radius: 16px; overflow: hidden;
+          border: 1px solid var(--line-strong);
+          box-shadow: 0 30px 60px -18px #000c, 0 10px 24px -10px #0009; }
+  .card img { display: block; width: 100%; }
+</style>
+</head>
+<body>
+  <div class="art"></div><div class="stars"></div><div class="grain"></div><div class="scrim"></div>
+
+  <div class="card" style="left: 640px;  top: 42px;  width: 400px;"><img src="../../widgets/artframe.launches/screenshot.png"></div>
+  <div class="card" style="left: 1058px; top: 30px;  width: 196px;"><img src="../../widgets/artframe.crypto/screenshot.png"></div>
+  <div class="card" style="left: 1058px; top: 112px; width: 196px;"><img src="../../widgets/artframe.github/screenshot.png"></div>
+  <div class="card" style="left: 676px;  top: 262px; width: 300px;"><img src="../../widgets/artframe.iss/screenshot.png"></div>
+  <div class="card" style="left: 994px;  top: 216px; width: 260px;"><img src="../../widgets/artframe.uv-wind/screenshot.png"></div>
+  <div class="card" style="left: 994px;  top: 318px; width: 260px;"><img src="../../widgets/mlynn.people-in-space/screenshot.png"></div>
+  <div class="card" style="left: 700px;  top: 376px; width: 250px;"><img src="../../widgets/artframe.year-progress/screenshot.png"></div>
+
+  <div class="copy">
+    <div class="eyebrow">ArtFrame · Widget gallery</div>
+    <h1>Live cards for the <em>art</em> on your TV</h1>
+    <p class="sub">Rocket launches, markets, the space station and more, drawn over your art. Each widget is one JSON file: data, not code.</p>
+    <div class="pills">
+      <span class="pill"><span class="dot" style="background: var(--cyan)"></span>Open spec</span>
+      <span class="pill"><span class="dot" style="background: var(--lavender)"></span>Signed gallery</span>
+      <span class="pill"><span class="dot" style="background: var(--coral)"></span>Add your own</span>
+    </div>
+  </div>
+  <script>
+    document.fonts.ready.then(() => {
+      const loaded = [...document.fonts].filter(f => f.status === 'loaded').map(f => f.family + ' ' + f.weight);
+      document.title = 'loaded: ' + [...new Set(loaded)].join(', ');
+    });
+  </script>
+</body>
+</html>
