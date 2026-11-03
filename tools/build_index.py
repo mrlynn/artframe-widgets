@@ -13,6 +13,7 @@ this script adds the rules for publishing it. Standard library only.
 import argparse
 import hashlib
 import json
+import os
 import re
 import shutil
 import struct
@@ -34,11 +35,54 @@ MAX_WIDGET_BYTES = 64 * 1024  # the TV skips bigger files
 MAX_SCREENSHOT_BYTES = 1024 * 1024
 
 
+def find_java_home():
+    """A JDK 17 for the checker: $JAVA_HOME, else macOS's java_home, else Homebrew's openjdk@17,
+    else whatever java is on PATH (None, so the checker's own script finds it)."""
+    env = os.environ.get("JAVA_HOME")
+    if env and (Path(env) / "bin" / "java").exists():
+        return env
+    if sys.platform == "darwin" and Path("/usr/libexec/java_home").exists():
+        r = subprocess.run(["/usr/libexec/java_home", "-v", "17"], capture_output=True, text=True)
+        if r.returncode == 0 and r.stdout.strip():
+            return r.stdout.strip()
+    for brew in ("/opt/homebrew/opt/openjdk@17", "/usr/local/opt/openjdk@17"):
+        if (Path(brew) / "bin" / "java").exists():
+            return brew
+    return None
+
+
+def checker_env():
+    env = dict(os.environ)
+    home = find_java_home()
+    if home:
+        env["JAVA_HOME"] = home
+        env["PATH"] = f"{home}/bin{os.pathsep}{env.get('PATH', '')}"
+    elif not shutil.which("java"):
+        fail("No Java found. The checker needs JDK 17: install it (brew install openjdk@17) or set JAVA_HOME.")
+    return env
+
+
+def fail(message, output=""):
+    print(f"✗ {message}", file=sys.stderr)
+    if output.strip():
+        print(output.rstrip(), file=sys.stderr)
+    sys.exit(1)
+
+
 def run_checker(files):
+    env = checker_env()
     if not CHECKER_BIN.exists():
-        subprocess.run(["./gradlew", "-q", "installDist"], cwd=CHECKER, check=True)
-    out = subprocess.run([str(CHECKER_BIN), *map(str, files)], capture_output=True, text=True, check=True).stdout
-    return {Path(r["file"]).resolve(): r for r in json.loads(out)}
+        r = subprocess.run(["./gradlew", "-q", "installDist"], cwd=CHECKER, env=env, capture_output=True, text=True)
+        if r.returncode != 0:
+            fail("Couldn't build the checker (checker/gradlew installDist):", r.stderr + r.stdout)
+    r = subprocess.run([str(CHECKER_BIN), *map(str, files)], capture_output=True, text=True, env=env)
+    if r.returncode != 0:
+        fail(f"The checker failed (exit {r.returncode}):", r.stderr + r.stdout)
+    try:
+        reports = json.loads(r.stdout)
+    except ValueError:
+        fail("The checker's output wasn't JSON:", r.stdout + r.stderr)
+    return {Path(x["file"]).resolve(): x for x in reports}
 
 
 def png_size(path):
