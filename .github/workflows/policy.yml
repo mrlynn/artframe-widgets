@@ -1,0 +1,127 @@
+name: Pull request rules
+
+# The check that guards merging. pull_request_target runs THIS file from the base branch, with
+# the base branch's tools/ and checker/, so a pull request can't change the rules it's held to.
+#
+# The pull request's files are checked out into pr/ as data only: nothing there is run, built,
+# sourced or installed. Only widgets/*/widget.json and screenshot.png are read (by the base
+# branch's checker and build_index.py) and git diffs are taken. Keep it that way: never run a
+# script, gradle, npm, make or an action from pr/, and never add secrets to this workflow.
+#
+# The "check" job has a read-only token. The "comment" job, which can write to the pull request,
+# never checks anything out; it only reads the check job's outputs, which our own code produced.
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, edited]
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: policy-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      result: ${{ steps.rules.outputs.result }}
+    steps:
+      - name: Check out the base branch (trusted tools)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: trusted
+          persist-credentials: false
+      - name: Check out the pull request (data only, never run)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          path: pr
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Make the base commit reachable from pr/
+        working-directory: pr
+        env:
+          BASE_REPO: ${{ github.repository }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: git fetch --no-tags --quiet "https://github.com/$BASE_REPO" "$BASE_SHA"
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Build the base branch's checker
+        working-directory: trusted/checker
+        run: ./gradlew -q installDist
+      - name: Check the pull request's widgets with the base branch's rules
+        id: rules
+        working-directory: trusted
+        env:
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          set +e
+          tools/build_index.py --check --report ../base.json > /dev/null 2>&1
+          tools/build_index.py --check --widgets ../pr/widgets --base-widgets widgets --report ../head.json
+          widgets=$?
+          tools/check_pr.py --base-dir . --head-dir ../pr --author "$AUTHOR" \
+            --base-report ../base.json --head-report ../head.json --out ../result.json
+          rules=$?
+          {
+            echo "result<<EOF_RESULT"
+            python3 -c 'import json; print(json.dumps(json.load(open("../result.json"))))'
+            echo "EOF_RESULT"
+          } >> "$GITHUB_OUTPUT"
+          [ "$widgets" -eq 0 ] && [ "$rules" -eq 0 ]
+
+  comment:
+    needs: check
+    if: always() && needs.check.outputs.result != ''
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Flag sites the pull request adds
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        env:
+          RESULT: ${{ needs.check.outputs.result }}
+        with:
+          script: |
+            const result = JSON.parse(process.env.RESULT);
+            const issue_number = context.payload.pull_request.number;
+            const { owner, repo } = context.repo;
+            const marker = "<!-- artframe-new-sites -->";
+            const host = /^[a-z0-9.-]{1,253}$/i;
+            const lines = [];
+            for (const [id, sites] of Object.entries(result.newSites || {})) {
+              if (!/^[a-z0-9][a-z0-9.-]{0,80}$/i.test(id)) continue;
+              for (const s of sites) {
+                if (!host.test(s.site)) continue;
+                lines.push(`- \`${id}\` → \`${s.site}\`${s.newToGallery ? " **(new to the gallery)**" : ""}`);
+              }
+            }
+            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number });
+            const mine = comments.find(c => c.user.type === "Bot" && c.body.includes(marker));
+            if (!lines.length) {
+              if (mine) await github.rest.issues.deleteComment({ owner, repo, comment_id: mine.id });
+              return;
+            }
+            const body = [marker, "### Sites this pull request adds", "",
+              "Viewers' TVs will send requests (and anything the URLs carry) to these sites. Check each is the real API, its terms allow this use, and the URL doesn't carry more than it needs.", "",
+              ...lines].join("\n");
+            if (mine) await github.rest.issues.updateComment({ owner, repo, comment_id: mine.id, body });
+            else await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            try {
+              await github.rest.issues.getLabel({ owner, repo, name: "new-host" });
+            } catch {
+              await github.rest.issues.createLabel({ owner, repo, name: "new-host", color: "d93f0b",
+                description: "Adds a site the widget's TVs will contact" });
+            }
+            await github.rest.issues.addLabels({ owner, repo, issue_number, labels: ["new-host"] });
