@@ -7,6 +7,9 @@ name: Publish the gallery
 on:
   push:
     branches: [main]
+  # Monthly, so the signed index (valid 30 days) is re-issued even when nothing is merged.
+  schedule:
+    - cron: '0 9 1 * *'
   workflow_dispatch:
 
 permissions: {}

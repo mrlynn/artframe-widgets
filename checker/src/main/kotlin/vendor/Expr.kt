@@ -54,7 +54,8 @@ object Template {
     // Every brace escaped: Android's ICU regex rejects a bare "}" that desktop Java accepts.
     private val HOLE = Regex("""\{\{((?:(?!\}\}).)*)\}\}""", RegexOption.DOT_MATCHES_ALL)
 
-    fun render(t: String, s: Scope): String = HOLE.replace(t) { Values.text(Exprs.eval(it.groupValues[1], s)) }
+    /** Each hole's value is [SafeText.clean]ed: it often comes straight from an API. */
+    fun render(t: String, s: Scope): String = HOLE.replace(t) { SafeText.clean(Values.text(Exprs.eval(it.groupValues[1], s))) }
 
     /** A template that is exactly one hole gives that value as is (a number, list...); anything else renders to text. */
     fun value(t: Any?, s: Scope): Any? {

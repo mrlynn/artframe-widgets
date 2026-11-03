@@ -24,6 +24,7 @@
     "settings": { "type": "array", "items": { "$ref": "#/$defs/setting" } },
     "data": {
       "type": "object",
+      "description": "At most 6 sources with \"source\": \"http\" (SPEC.md Limits); built-in providers don't count. JSON Schema can't count only the HTTP ones, so the checker and the apps enforce it.",
       "propertyNames": { "pattern": "^[A-Za-z][A-Za-z0-9_]{0,39}$" },
       "additionalProperties": { "$ref": "#/$defs/source" }
     },
@@ -86,7 +87,8 @@
         "source": { "enum": ["http", "weather", "air", "moon", "markets", "calendar", "headlines"] },
         "url": {
           "$ref": "#/$defs/template",
-          "description": "https:// with the site written out, then /, ? or the end before any {{ }}; or a single text setting, {{ settings.feed }}",
+          "description": "https:// with the site written out, then /, ? or the end before any {{ }}; or a single text setting, {{ settings.feed }}. The site must be a DNS name: no IP addresses, localhost, .local names or link shorteners. Redirects stay on the same host, up to 3.",
+          "not": { "pattern": "^https://(\\d{1,3}(\\.\\d{1,3}){3}|localhost|[A-Za-z0-9.-]*\\.(local|localhost))\\.?([:/?#]|$)" },
           "pattern": "^(https://[A-Za-z0-9.-]+(:[0-9]{1,5})?([/?#][^{]*(\\{\\{.*)?)?|\\{\\{\\s*settings\\.[A-Za-z][A-Za-z0-9_]*\\s*\\}\\})$"
         },
         "format": { "enum": ["json", "rss", "text"], "default": "json" },
@@ -96,8 +98,22 @@
         "error": { "type": "string" },
         "optional": { "type": "boolean" }
       },
-      "if": { "properties": { "source": { "const": "http" } } },
-      "then": { "required": ["url"] }
+      "allOf": [
+        {
+          "if": { "properties": { "source": { "const": "http" } } },
+          "then": { "required": ["url"] }
+        },
+        {
+          "$comment": "SPEC.md Limits: a source whose url or headers use hud. or settings. refreshes at most every 300 s.",
+          "if": {
+            "anyOf": [
+              { "properties": { "url": { "pattern": "\\{\\{[^}]*\\b(hud|settings)\\b" } }, "required": ["url"] },
+              { "properties": { "headers": { "not": { "additionalProperties": { "not": { "pattern": "\\{\\{[^}]*\\b(hud|settings)\\b" } } } } }, "required": ["headers"] }
+            ]
+          },
+          "then": { "properties": { "refresh": { "minimum": 300 } } }
+        }
+      ]
     },
     "common": {
       "when": { "$ref": "#/$defs/expression" },
