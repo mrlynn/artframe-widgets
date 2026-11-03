@@ -1,0 +1,35 @@
+{
+  "$schema": "https://artframe.mlynn.dev/widgets/widget.schema.json",
+  "spec": 1,
+  "id": "mlynn.people-in-space",
+  "author": "mlynn",
+  "version": "1.0.0",
+  "name": "People in space",
+  "description": "How many humans are off the planet right now, and who they are (Launch Library 2)",
+  "icon": "person.3",
+  "size": "small",
+  "title": "Off planet now",
+  "data": {
+    "a": {
+      "source": "http",
+      "url": "https://ll.thespacedevs.com/2.2.0/astronaut/?in_space=true&limit=30&mode=list",
+      "refresh": 21600,
+      "error": "Astronaut list unavailable"
+    }
+  },
+  "layout": {
+    "type": "column",
+    "children": [
+      {
+        "type": "row",
+        "align": "baseline",
+        "children": [
+          { "type": "text", "text": "{{ data.a.count }}", "size": 40, "font": "thin", "tabular": true },
+          { "type": "text", "before": 10, "text": "{{ data.a.count == 1 ? 'human' : 'humans' }} in space", "size": 15, "color": "muted" }
+        ]
+      },
+      { "type": "text", "before": 4, "lines": "{{ layout.compact ? 2 : 4 }}", "size": 13, "font": "light",
+        "text": "{{ data.a.results | map:'name' | join:' · ' }}" }
+    ]
+  }
+}

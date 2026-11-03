@@ -1,0 +1,47 @@
+{
+  "$schema": "https://artframe.mlynn.dev/widgets/widget.schema.json",
+  "spec": 1,
+  "id": "mlynn.space-weather",
+  "author": "mlynn",
+  "version": "1.0.0",
+  "name": "Space weather",
+  "description": "Planetary Kp index, solar wind and NOAA storm scales, the weather that matters to satellites in low Earth orbit",
+  "icon": "sun.max.trianglebadge.exclamationmark",
+  "size": "small",
+  "title": "Space weather",
+  "data": {
+    "kp": { "source": "http", "url": "https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json", "refresh": 1800, "error": "NOAA SWPC unavailable" },
+    "wind": { "source": "http", "url": "https://services.swpc.noaa.gov/products/summary/solar-wind-speed.json", "refresh": 600, "optional": true },
+    "mag": { "source": "http", "url": "https://services.swpc.noaa.gov/products/summary/solar-wind-mag-field.json", "refresh": 600, "optional": true },
+    "scales": { "source": "http", "url": "https://services.swpc.noaa.gov/products/noaa-scales.json", "refresh": 1800, "optional": true }
+  },
+  "layout": {
+    "type": "column",
+    "children": [
+      {
+        "type": "row",
+        "align": "baseline",
+        "children": [
+          { "type": "text", "text": "Kp {{ (data.kp | last).Kp | fixed:1 }}", "size": 26, "font": "light", "tabular": true,
+            "color": "{{ (data.kp | last).Kp >= 5 ? 'down' : ((data.kp | last).Kp >= 4 ? '#FBBF24' : 'up') }}" },
+          { "type": "text", "before": 10, "flex": 1, "size": 13, "color": "muted",
+            "text": "{{ (data.kp | last).Kp >= 7 ? 'Severe storm' : ((data.kp | last).Kp >= 5 ? 'Geomagnetic storm' : ((data.kp | last).Kp >= 4 ? 'Active' : 'Quiet')) }}" },
+          { "type": "sparkline", "points": "data.kp | reverse | take:24 | reverse | map:'Kp'", "width": 72, "height": 22 }
+        ]
+      },
+      {
+        "type": "row",
+        "before": 6,
+        "children": [
+          { "type": "bar", "radius": 2, "height": 6, "color": "{{ (data.kp | last).Kp >= 5 ? 'down' : 'accent' }}", "width": "{{ ((data.kp | last).Kp / 9 * 240) | round }}" },
+          { "type": "bar", "radius": 2, "height": 6, "color": "#33FFFFFF", "width": "{{ 240 - ((data.kp | last).Kp / 9 * 240) | round }}" },
+          { "type": "text", "before": 8, "text": "/ 9", "size": 11, "color": "muted" }
+        ]
+      },
+      { "type": "text", "before": 6, "size": 13, "font": "light", "color": "muted", "tabular": true, "when": "data.wind",
+        "text": "Solar wind {{ data.wind[0].proton_speed | number:0 }} km/s{{ data.mag ? ' · Bz ' + (data.mag[0].bz_gsm | signed) + ' nT' : '' }}" },
+      { "type": "text", "before": 2, "size": 12, "color": "accent", "when": "data.scales",
+        "text": "NOAA  R{{ data.scales['0'].R.Scale }}  S{{ data.scales['0'].S.Scale }}  G{{ data.scales['0'].G.Scale }}" }
+    ]
+  }
+}
