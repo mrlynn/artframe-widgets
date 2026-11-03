@@ -12,7 +12,7 @@ src="$tv/artframe/app/src/main/kotlin/com/mrlynn/artframe/widget"
 out="$here/checker/src/main/kotlin/vendor"
 [[ -f "$src/WidgetSpec.kt" ]] || { echo "No widget parser in $src. Set TV_REPO." >&2; exit 1; }
 rm -rf "$out" && mkdir -p "$out"
-for f in Json.kt Expr.kt Wmo.kt WidgetSpec.kt HostPolicy.kt; do cp "$src/$f" "$out/"; done
+for f in Json.kt Expr.kt Wmo.kt WidgetSpec.kt HostPolicy.kt SafeText.kt TextLint.kt; do cp "$src/$f" "$out/"; done
 commit="$(git -C "$tv" rev-parse --short HEAD)"
 dirty="$(git -C "$tv" status --porcelain -- artframe/app/src/main/kotlin/com/mrlynn/artframe/widget | head -1)"
 printf 'Copied from the ArtFrame app repo at %s%s by tools/sync-from-app.sh. Edit the app, not these.\n' \

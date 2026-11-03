@@ -23,6 +23,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 WIDGETS = ROOT / "widgets"
 CHECKER = ROOT / "checker"
+# The checker's text warnings (phone numbers, web addresses, "scan"/"call"): shown, never fatal.
+WARNINGS: list[str] = []
 CHECKER_BIN = CHECKER / "build" / "install" / "checker" / "bin" / "checker"
 
 INDEX_FORMAT = 1
@@ -80,6 +82,7 @@ def check(base=None):
             continue
 
         report = reports[manifest.resolve()]
+        WARNINGS.extend(f"{name}: widget.json: {w}" for w in report.get("warnings", []))
         if not report["ok"]:
             bad += [f"widget.json: {p}" for p in report["problems"]]
         raw = manifest.read_bytes()
@@ -184,6 +187,8 @@ def main():
     args = ap.parse_args()
 
     entries, problems = check(args.base)
+    for w in WARNINGS:
+        print(f"⚠ {w} (review; doesn't fail the check)", file=sys.stderr)
     for p in problems:
         print(f"✗ {p}", file=sys.stderr)
     if problems:
