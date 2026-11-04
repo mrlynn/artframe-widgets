@@ -1,0 +1,178 @@
+{
+  "$schema": "https://artframe.mlynn.dev/widgets/widget.schema.json",
+  "spec": 1,
+  "id": "mlynn.election",
+  "author": "mlynn",
+  "version": "1.0.0",
+  "name": "Election results",
+  "description": "Who's leading in the 2026 House, Senate or Governor races, from official state counts",
+  "icon": "checkmark.seal",
+  "size": "large",
+  "title": "{{ data.e.office || settings.office }} {{ data.e.year }}",
+  "settings": [
+    {
+      "key": "office",
+      "label": "Races",
+      "type": "choice",
+      "default": "Senate",
+      "options": [
+        {
+          "value": "Senate",
+          "label": "Senate"
+        },
+        {
+          "value": "House",
+          "label": "House"
+        },
+        {
+          "value": "Governor",
+          "label": "Governor"
+        }
+      ]
+    }
+  ],
+  "data": {
+    "e": {
+      "source": "http",
+      "url": "https://openamerica.io/elections/results.json?office={{ settings.office | url }}",
+      "refresh": 300,
+      "loading": "Fetching the count…",
+      "error": "Results unavailable"
+    }
+  },
+  "layout": {
+    "type": "column",
+    "children": [
+      {
+        "type": "row",
+        "align": "baseline",
+        "children": [
+          {
+            "type": "text",
+            "text": "{{ data.e.races | entries | where:'value.leader':'D' | count }}",
+            "size": 34,
+            "font": "light",
+            "color": "#5B8DEF",
+            "tabular": true
+          },
+          {
+            "type": "text",
+            "text": "Dem.",
+            "size": 13,
+            "color": "muted",
+            "before": 6
+          },
+          {
+            "type": "text",
+            "text": "{{ data.e.races | entries | where:'value.leader':'R' | count }}",
+            "size": 34,
+            "font": "light",
+            "color": "#E5534B",
+            "tabular": true,
+            "before": 22
+          },
+          {
+            "type": "text",
+            "text": "Rep.",
+            "size": 13,
+            "color": "muted",
+            "before": 6
+          },
+          {
+            "type": "row",
+            "align": "baseline",
+            "before": 22,
+            "when": "(data.e.races | entries | where:'value.leader' | count) > (data.e.races | entries | where:'value.leader':'D' | count) + (data.e.races | entries | where:'value.leader':'R' | count)",
+            "children": [
+              {
+                "type": "text",
+                "text": "{{ (data.e.races | entries | where:'value.leader' | count) - (data.e.races | entries | where:'value.leader':'D' | count) - (data.e.races | entries | where:'value.leader':'R' | count) }}",
+                "size": 34,
+                "font": "light",
+                "tabular": true
+              },
+              {
+                "type": "text",
+                "text": "Other",
+                "size": 13,
+                "color": "muted",
+                "before": 6
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "text": "leading · {{ data.e.counts.reporting }} of {{ data.e.counts.races }} races fully counted",
+        "size": 12,
+        "color": "muted",
+        "before": 2
+      },
+      {
+        "type": "label",
+        "text": "Closest",
+        "before": 14
+      },
+      {
+        "type": "list",
+        "items": "data.e.races | entries | where:'value.total' | where:'value.uncontested':false",
+        "sortBy": "r.value.cands[0].pct - r.value.cands[1].pct",
+        "as": "r",
+        "max": "{{ layout.area == 'column' || layout.size == 'wide' ? 2 : 3 }}",
+        "gap": 6,
+        "empty": "No votes counted yet",
+        "item": {
+          "type": "row",
+          "children": [
+            {
+              "type": "text",
+              "text": "{{ r.key }}",
+              "size": 12,
+              "font": "medium",
+              "color": "muted",
+              "tracking": 0.06,
+              "width": 46
+            },
+            {
+              "type": "text",
+              "text": "{{ r.value.cands[0].n }}",
+              "size": 14,
+              "flex": 1
+            },
+            {
+              "type": "text",
+              "text": "{{ r.value.leader }} +{{ (r.value.cands[0].pct - r.value.cands[1].pct) | fixed:1 }}",
+              "size": 14,
+              "tabular": true,
+              "align": "end",
+              "width": 64,
+              "color": "{{ r.value.leader == 'D' ? '#5B8DEF' : r.value.leader == 'R' ? '#E5534B' : 'text' }}"
+            },
+            {
+              "type": "text",
+              "when": "r.value.pct_in != null && r.value.pct_in < 100",
+              "text": "{{ r.value.pct_in | int }}% in",
+              "size": 12,
+              "color": "muted",
+              "tabular": true,
+              "align": "end",
+              "width": 52
+            }
+          ]
+        }
+      },
+      {
+        "type": "spacer"
+      },
+      {
+        "type": "text",
+        "text": "{{ data.e.stale ? 'May be behind · ' : '' }}Official state election offices via Open America · {{ data.e.as_of | date:'MMM d, h:mm a' }}",
+        "size": 10,
+        "color": "muted",
+        "lines": 2,
+        "before": 8
+      }
+    ]
+  }
+}
