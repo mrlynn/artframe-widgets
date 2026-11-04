@@ -3,176 +3,92 @@
   "spec": 1,
   "id": "mlynn.election",
   "author": "mlynn",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "name": "Election results",
-  "description": "Who's leading in the 2026 House, Senate or Governor races, from official state counts",
+  "description": "Who's leading the 2026 House, Senate or Governor races, from official state counts: the tally, the races to watch, or one race in full",
   "icon": "checkmark.seal",
   "size": "large",
-  "title": "{{ data.e.office || settings.office }} {{ data.e.year }}",
+  "title": "{{ settings.race ? (settings.race | upper | trim) + ' ' + data.e.office : data.e.office + ' ' + data.e.year + ' · leading, not called' }}",
   "settings": [
-    {
-      "key": "office",
-      "label": "Races",
-      "type": "choice",
-      "default": "Senate",
-      "options": [
-        {
-          "value": "Senate",
-          "label": "Senate"
-        },
-        {
-          "value": "House",
-          "label": "House"
-        },
-        {
-          "value": "Governor",
-          "label": "Governor"
-        }
-      ]
-    }
+    { "key": "office", "label": "Races", "type": "choice", "default": "Senate",
+      "options": [ { "value": "Senate", "label": "Senate" }, { "value": "House", "label": "House" }, { "value": "Governor", "label": "Governor" } ] },
+    { "key": "view", "label": "Show", "type": "choice", "default": "close",
+      "options": [ { "value": "close", "label": "Closest races" }, { "value": "counting", "label": "Still counting" }, { "value": "all", "label": "Every race, by state" } ] },
+    { "key": "race", "label": "One race in full (e.g. TX or TX-07; blank for all)", "type": "text" }
   ],
   "data": {
-    "e": {
-      "source": "http",
-      "url": "https://openamerica.io/elections/results.json?office={{ settings.office | url }}",
-      "refresh": 300,
-      "loading": "Fetching the count…",
-      "error": "Results unavailable"
-    }
+    "e": { "source": "http", "url": "https://openamerica.io/elections/results.json?office={{ settings.office | url }}",
+      "refresh": 300, "loading": "Fetching the count…", "error": "Results unavailable" }
   },
   "layout": {
     "type": "column",
     "children": [
-      {
-        "type": "row",
-        "align": "baseline",
-        "children": [
-          {
-            "type": "text",
-            "text": "{{ data.e.races | entries | where:'value.leader':'D' | count }}",
-            "size": 34,
-            "font": "light",
-            "color": "#5B8DEF",
-            "tabular": true
-          },
-          {
-            "type": "text",
-            "text": "Dem.",
-            "size": 13,
-            "color": "muted",
-            "before": 6
-          },
-          {
-            "type": "text",
-            "text": "{{ data.e.races | entries | where:'value.leader':'R' | count }}",
-            "size": 34,
-            "font": "light",
-            "color": "#E5534B",
-            "tabular": true,
-            "before": 22
-          },
-          {
-            "type": "text",
-            "text": "Rep.",
-            "size": 13,
-            "color": "muted",
-            "before": 6
-          },
-          {
-            "type": "row",
-            "align": "baseline",
-            "before": 22,
-            "when": "(data.e.races | entries | where:'value.leader' | count) > (data.e.races | entries | where:'value.leader':'D' | count) + (data.e.races | entries | where:'value.leader':'R' | count)",
-            "children": [
-              {
-                "type": "text",
-                "text": "{{ (data.e.races | entries | where:'value.leader' | count) - (data.e.races | entries | where:'value.leader':'D' | count) - (data.e.races | entries | where:'value.leader':'R' | count) }}",
-                "size": 34,
-                "font": "light",
-                "tabular": true
-              },
-              {
-                "type": "text",
-                "text": "Other",
-                "size": 13,
-                "color": "muted",
-                "before": 6
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "type": "text",
-        "text": "leading · {{ data.e.counts.reporting }} of {{ data.e.counts.races }} races fully counted",
-        "size": 12,
-        "color": "muted",
-        "before": 2
-      },
-      {
-        "type": "label",
-        "text": "Closest",
-        "before": 14
-      },
-      {
-        "type": "list",
-        "items": "data.e.races | entries | where:'value.total' | where:'value.uncontested':false",
-        "sortBy": "r.value.cands[0].pct - r.value.cands[1].pct",
-        "as": "r",
-        "max": "{{ layout.area == 'column' || layout.size == 'wide' ? 2 : 3 }}",
-        "gap": 6,
-        "empty": "No votes counted yet",
-        "item": {
-          "type": "row",
-          "children": [
-            {
-              "type": "text",
-              "text": "{{ r.key }}",
-              "size": 12,
-              "font": "medium",
-              "color": "muted",
-              "tracking": 0.06,
-              "width": 46
-            },
-            {
-              "type": "text",
-              "text": "{{ r.value.cands[0].n }}",
-              "size": 14,
-              "flex": 1
-            },
-            {
-              "type": "text",
-              "text": "{{ r.value.leader }} +{{ (r.value.cands[0].pct - r.value.cands[1].pct) | fixed:1 }}",
-              "size": 14,
-              "tabular": true,
-              "align": "end",
-              "width": 64,
-              "color": "{{ r.value.leader == 'D' ? '#5B8DEF' : r.value.leader == 'R' ? '#E5534B' : 'text' }}"
-            },
-            {
-              "type": "text",
-              "when": "r.value.pct_in != null && r.value.pct_in < 100",
-              "text": "{{ r.value.pct_in | int }}% in",
-              "size": 12,
-              "color": "muted",
-              "tabular": true,
-              "align": "end",
-              "width": 52
-            }
-          ]
-        }
-      },
-      {
-        "type": "spacer"
-      },
-      {
-        "type": "text",
-        "text": "{{ data.e.stale ? 'May be behind · ' : '' }}Official state election offices via Open America · {{ data.e.as_of | date:'MMM d, h:mm a' }}",
-        "size": 10,
-        "color": "muted",
-        "lines": 2,
-        "before": 8
-      }
+      { "type": "column", "when": "!settings.race", "children": [
+        { "type": "row", "align": "baseline", "children": [
+          { "type": "text", "text": "{{ data.e.races | entries | where:'value.leader':'D' | count }}", "size": 30, "font": "light", "color": "#5B8DEF", "tabular": true },
+          { "type": "text", "text": "Dem", "size": 13, "color": "muted", "before": 5 },
+          { "type": "spacer" },
+          { "type": "text", "text": "{{ data.e.counts.races - (data.e.races | entries | where:'value.leader':'D' | count) - (data.e.races | entries | where:'value.leader':'R' | count) }} other", "size": 13, "color": "muted",
+            "when": "data.e.counts.races > (data.e.races | entries | where:'value.leader':'D' | count) + (data.e.races | entries | where:'value.leader':'R' | count)" },
+          { "type": "spacer" },
+          { "type": "text", "text": "Rep", "size": 13, "color": "muted" },
+          { "type": "text", "text": "{{ data.e.races | entries | where:'value.leader':'R' | count }}", "size": 30, "font": "light", "color": "#E5534B", "tabular": true, "before": 5 }
+        ] },
+        { "type": "row", "before": 4, "children": [
+          { "type": "bar", "height": 8, "radius": 4, "color": "#5B8DEF", "flex": "{{ data.e.races | entries | where:'value.leader':'D' | count }}" },
+          { "type": "bar", "height": 8, "radius": 4, "color": "muted", "before": 2,
+            "flex": "{{ data.e.counts.races - (data.e.races | entries | where:'value.leader':'D' | count) - (data.e.races | entries | where:'value.leader':'R' | count) }}",
+            "when": "data.e.counts.races > (data.e.races | entries | where:'value.leader':'D' | count) + (data.e.races | entries | where:'value.leader':'R' | count)" },
+          { "type": "bar", "height": 8, "radius": 4, "color": "#E5534B", "before": 2, "flex": "{{ data.e.races | entries | where:'value.leader':'R' | count }}" }
+        ] },
+        { "type": "text", "size": 12, "color": "muted", "before": 4,
+          "text": "{{ data.e.counts.races }} races in {{ data.e.races | entries | count }} with results · {{ data.e.counts.reporting }} fully counted, {{ data.e.counts.races - data.e.counts.reporting }} still counting" },
+        { "type": "label", "before": 10,
+          "text": "{{ settings.view == 'counting' ? 'Still counting · least counted first' : settings.view == 'all' ? 'Every race' : 'Closest · gap between the top two' }}" },
+        { "type": "list",
+          "items": "settings.view == 'counting' ? (data.e.races | entries | where:'value.total') : (data.e.races | entries | where:'value.total' | where:'value.uncontested':false)",
+          "sortBy": "settings.view == 'counting' ? (r.value.pct_in >= 100 ? null : r.value.pct_in) : settings.view == 'all' ? null : r.value.cands[0].pct - r.value.cands[1].pct",
+          "as": "r", "max": "{{ layout.area == 'wide' ? 4 : 5 }}", "gap": 7, "empty": "No votes counted yet",
+          "item": { "type": "row", "children": [
+            { "type": "text", "text": "{{ r.key }}", "size": 12, "font": "medium", "color": "muted", "tabular": true, "width": 50 },
+            { "type": "column", "flex": 1, "children": [
+              { "type": "row", "align": "baseline", "children": [
+                { "type": "text", "text": "{{ r.value.cands[0].n }}", "size": 14, "flex": 1 },
+                { "type": "text", "text": "{{ r.value.cands[0].pct | fixed:1 }}–{{ r.value.cands[1].pct | fixed:1 }}", "size": 12, "color": "muted", "tabular": true, "before": 6 }
+              ] },
+              { "type": "row", "before": 3, "children": [
+                { "type": "bar", "height": 5, "radius": 2, "width": "{{ r.value.cands[0].pct * 1.4 | round }}",
+                  "color": "{{ r.value.cands[0].p == 'D' ? '#5B8DEF' : r.value.cands[0].p == 'R' ? '#E5534B' : '#B0B0B0' }}" },
+                { "type": "bar", "height": 5, "radius": 2, "before": 2, "width": "{{ r.value.cands[1].pct * 1.4 | round }}",
+                  "color": "{{ r.value.cands[1].p == 'D' ? '#995B8DEF' : r.value.cands[1].p == 'R' ? '#99E5534B' : '#99B0B0B0' }}" }
+              ] }
+            ] },
+            { "type": "column", "align": "end", "width": 70, "before": 8, "children": [
+              { "type": "text", "text": "{{ r.value.leader }} +{{ (r.value.cands[0].pct - r.value.cands[1].pct) | fixed:1 }}", "size": 14, "tabular": true,
+                "color": "{{ r.value.leader == 'D' ? '#5B8DEF' : r.value.leader == 'R' ? '#E5534B' : 'text' }}" },
+              { "type": "text", "size": 11, "color": "muted", "tabular": true,
+                "text": "{{ r.value.pct_in == null ? '' : r.value.pct_in >= 100 ? 'counted' : (r.value.pct_in | int) + '% in' }}" }
+            ] }
+          ] } }
+      ] },
+      { "type": "column", "when": "settings.race", "children": [
+        { "type": "text", "size": 12, "color": "muted",
+          "text": "{{ data.e.races[settings.race | upper | trim] ? ((data.e.races[settings.race | upper | trim].total | number:0) + ' votes · ' + (data.e.races[settings.race | upper | trim].pct_in >= 100 ? 'fully counted' : (data.e.races[settings.race | upper | trim].pct_in | int) + '% counted') + ' · lead ' + ((data.e.races[settings.race | upper | trim].cands[0].v - data.e.races[settings.race | upper | trim].cands[1].v) | number:0) + ' votes') : 'No ' + data.e.office + ' race \"' + (settings.race | upper | trim) + '\" in this feed' }}" },
+        { "type": "list", "before": 10, "gap": 9, "max": 6, "items": "data.e.races[settings.race | upper | trim].cands", "as": "c",
+          "item": { "type": "column", "children": [
+            { "type": "row", "align": "baseline", "children": [
+              { "type": "text", "text": "{{ c.p }}", "size": 12, "font": "medium", "width": 22, "color": "{{ c.p == 'D' ? '#5B8DEF' : c.p == 'R' ? '#E5534B' : 'muted' }}" },
+              { "type": "text", "text": "{{ c.n }}{{ c.inc ? ' (inc.)' : '' }}", "size": 15, "flex": 1 },
+              { "type": "text", "text": "{{ c.v | number:0 }}", "size": 12, "color": "muted", "tabular": true, "before": 6 },
+              { "type": "text", "text": "{{ c.pct | fixed:1 }}%", "size": 15, "tabular": true, "align": "end", "width": 58 }
+            ] },
+            { "type": "bar", "height": 6, "radius": 3, "before": 3, "width": "{{ c.pct * 3.4 | round }}",
+              "color": "{{ c.p == 'D' ? '#5B8DEF' : c.p == 'R' ? '#E5534B' : '#B0B0B0' }}" }
+          ] } }
+      ] },
+      { "type": "spacer" },
+      { "type": "text", "size": 10, "color": "muted", "lines": 2, "before": 6,
+        "text": "{{ data.e.stale ? 'May be behind · ' : '' }}Official state election offices via Open America · {{ data.e.as_of | date:'MMM d, h:mm a' }}" }
     ]
   }
 }
