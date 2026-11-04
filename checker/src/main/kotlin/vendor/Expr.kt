@@ -37,6 +37,22 @@ fun interface Expr {
 object Exprs {
     private val cache = HashMap<String, Expr>()
 
+    /**
+     * A list node's `sortBy`: [items] in ascending order of [by], worked out for each item as
+     * [name]. Items it gives nothing for go last; ties keep their order.
+     */
+    fun sortBy(items: List<*>, by: String?, name: String, scope: Scope): List<*> {
+        if (by == null) return items
+        return items.map { it to eval(by, scope.with(name to it)) }.sortedWith { (_, a), (_, b) ->
+            when {
+                a == null && b == null -> 0
+                a == null -> 1
+                b == null -> -1
+                else -> Values.compare(a, b) ?: 0
+            }
+        }.map { it.first }
+    }
+
     /** Parses (and caches) an expression; throws [ExprException] if it isn't valid. */
     fun parse(src: String): Expr = synchronized(cache) {
         cache[src] ?: Parser(src).parseAll().also {
@@ -340,6 +356,13 @@ object Filters {
         else -> listOf(v)
     }
 
+    /** [key] in [v]: a plain key first, else a dotted path, `'value.leader'`. */
+    private fun at(v: Any?, key: Any?): Any? {
+        Values.member(v, key)?.let { return it }
+        val parts = (key as? String)?.split('.')?.takeIf { it.size > 1 } ?: return null
+        return parts.fold(v) { o, k -> Values.member(o, k) }
+    }
+
     val all: Map<String, FilterFn> = mapOf(
         // Values
         "default" to { v, a, _ -> if (v == null || v == "" || (v is Double && v.isNaN())) a.getOrNull(0) else v },
@@ -395,8 +418,19 @@ object Filters {
         "skip" to { v, a, _ -> list(v).drop(n(a.getOrNull(0))?.toInt()?.coerceAtLeast(0) ?: 1) },
         "reverse" to { v, _, _ -> list(v).reversed() },
         "join" to { v, a, _ -> list(v).joinToString(a.getOrNull(0)?.let(Values::text) ?: ", ") { Values.text(it) } },
-        "map" to { v, a, _ -> list(v).map { Values.member(it, a.getOrNull(0)) } },
-        "where" to { v, a, _ -> list(v).filter { Values.truthy(Values.member(it, a.getOrNull(0))) } },
+        "map" to { v, a, _ -> list(v).map { at(it, a.getOrNull(0)) } },
+        // where:'key' keeps items whose key is true; where:'key':x those whose key is x.
+        "where" to { v, a, _ ->
+            if (a.size < 2) list(v).filter { Values.truthy(at(it, a.getOrNull(0))) }
+            else list(v).filter { Values.eq(at(it, a[0]), a[1]) }
+        },
+        // An object as a list of {key, value}, by key: for data keyed by name, like {"GA": {...}}.
+        "entries" to { v, _, _ ->
+            when (v) {
+                is Map<*, *> -> v.entries.sortedBy { Values.text(it.key) }.map { mapOf("key" to it.key, "value" to it.value) }
+                else -> list(v).mapIndexed { i, x -> mapOf("key" to i, "value" to x) }
+            }
+        },
         "sum" to { v, _, _ -> list(v).mapNotNull(::n).sum() },
         "min" to { v, _, _ -> list(v).mapNotNull(::n).minOrNull() },
         "max" to { v, _, _ -> list(v).mapNotNull(::n).maxOrNull() },

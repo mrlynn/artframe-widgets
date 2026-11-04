@@ -26,6 +26,22 @@ data class WidgetSpec(
     /** Small widgets stack in the left column, large ones share a row, wide ones get a row each. */
     enum class Size { SMALL, LARGE, WIDE }
 
+    /**
+     * The sizes a person can pick for a widget instead of its own (hud.json "widgetSizes"): a
+     * tile in the left column, a card sharing the row, a panel with twice a card's share, or a
+     * banner across the whole row.
+     */
+    enum class Shape(val size: Size, val weight: Float) {
+        TILE(Size.SMALL, 1f), CARD(Size.LARGE, 1f), PANEL(Size.LARGE, 2f), BANNER(Size.WIDE, 1f);
+
+        companion object {
+            fun of(name: String?): Shape? = entries.firstOrNull { it.name.equals(name?.trim(), ignoreCase = true) }
+        }
+    }
+
+    /** This widget drawn at [shape], or as its file says when null. */
+    fun resized(shape: Shape?): WidgetSpec = if (shape == null) this else copy(size = shape.size, weight = shape.weight)
+
     /** A [secret] setting (an API key) only ever reaches a source with a fixed site; see [Source.host]. */
     data class Setting(val key: String, val type: String, val default: Any?, val secret: Boolean = false)
 
@@ -59,6 +75,12 @@ data class WidgetSpec(
 
         /** Data the app fetches itself, from hud.json's own settings (location, calendars, ...). */
         val PROVIDERS = setOf("weather", "air", "moon", "markets", "calendar", "headlines")
+        /**
+         * The app's own, for its built-in manifests only: `gallery` reads the art folder, and the
+         * `gallery` node draws its pictures. Not in the spec, so a widget file can't use either.
+         */
+        private val NATIVE_PROVIDERS = setOf("gallery")
+        private val NATIVE_NODES = mapOf("gallery" to setOf("items", "max", "gap"))
 
         private val ID = Regex("[a-z0-9][a-z0-9._-]{0,63}")
         private val KEY = Regex("[A-Za-z][A-Za-z0-9_]{0,39}")
@@ -110,13 +132,15 @@ data class WidgetSpec(
             "text" to TEXT,
             "label" to setOf("text", "color"),
             "clock" to TEXT - "text" - "lines" + setOf("format", "format24"),
-            "list" to setOf("items", "as", "max", "item", "gap", "direction", "groupBy", "header", "groupGap", "empty"),
+            "list" to setOf("items", "as", "max", "item", "gap", "direction", "sortBy", "groupBy", "header", "groupGap", "empty"),
             "sparkline" to setOf("points", "baseline", "color"),
             "bar" to setOf("color", "radius"),
             "spacer" to setOf("size"),
         )
         /** Attributes holding a bare expression rather than a `{{ }}` template. */
-        private val EXPRESSIONS = setOf("when", "items", "groupBy", "points", "baseline")
+        private val EXPRESSIONS = setOf("when", "items", "sortBy", "groupBy", "points", "baseline")
+
+        fun allowsProvider(kind: String?, builtIn: Boolean) = kind in PROVIDERS || (builtIn && kind in NATIVE_PROVIDERS)
 
         fun parse(text: String, builtIn: Boolean = false): WidgetSpec =
             parse(
@@ -163,7 +187,7 @@ data class WidgetSpec(
             val data = (j["data"] as? Map<*, *> ?: emptyMap<Any?, Any?>()).entries.associate { (k, v) ->
                 val name = k as String
                 if (!KEY.matches(name)) problems += "data \"$name\" needs a name like \"main\""
-                name to source(name, v as? Map<*, *>, settings, problems)
+                name to source(name, v as? Map<*, *>, settings, builtIn, problems)
             }
             val httpCount = data.values.count { it.kind == "http" }
             if (httpCount > MAX_HTTP_SOURCES) problems += "At most $MAX_HTTP_SOURCES HTTP data sources; this widget has $httpCount"
@@ -184,7 +208,7 @@ data class WidgetSpec(
 
             @Suppress("UNCHECKED_CAST")
             val layout = j["layout"] as? Map<String, Any?>
-            if (layout == null) problems += "\"layout\" is required" else checkNode(layout, "layout", 0, intArrayOf(0), problems)
+            if (layout == null) problems += "\"layout\" is required" else checkNode(layout, "layout", 0, intArrayOf(0), builtIn, problems)
 
             if (problems.isNotEmpty()) throw WidgetSpecException(problems)
             return WidgetSpec(
@@ -204,9 +228,9 @@ data class WidgetSpec(
             )
         }
 
-        private fun source(name: String, m: Map<*, *>?, settings: List<Setting>, problems: MutableList<String>): Source {
+        private fun source(name: String, m: Map<*, *>?, settings: List<Setting>, builtIn: Boolean, problems: MutableList<String>): Source {
             val kind = m?.get("source") as? String
-            if (kind == null || (kind != "http" && kind !in PROVIDERS)) {
+            if (kind == null || (kind != "http" && !allowsProvider(kind, builtIn))) {
                 problems += "data \"$name\": \"source\" must be http or one of ${PROVIDERS.sorted().joinToString()}"
             }
             val url = m?.get("url") as? String
@@ -253,11 +277,11 @@ data class WidgetSpec(
             )
         }
 
-        private fun checkNode(n: Map<String, Any?>, path: String, depth: Int, count: IntArray, problems: MutableList<String>) {
+        private fun checkNode(n: Map<String, Any?>, path: String, depth: Int, count: IntArray, builtIn: Boolean, problems: MutableList<String>) {
             if (++count[0] > MAX_NODES) return run { if (count[0] == MAX_NODES + 1) problems += "More than $MAX_NODES layout nodes" }
             if (depth > MAX_DEPTH) return run { problems += "$path: nested more than $MAX_DEPTH deep" }
             val type = n["type"] as? String
-            val allowed = ATTRS[type] ?: return run { problems += "$path: unknown type \"$type\"" }
+            val allowed = ATTRS[type] ?: NATIVE_NODES[type]?.takeIf { builtIn } ?: return run { problems += "$path: unknown type \"$type\"" }
             for ((k, v) in n) {
                 when {
                     k !in COMMON && k !in allowed -> problems += "$path: \"$type\" has no \"$k\""
@@ -268,16 +292,16 @@ data class WidgetSpec(
             when (type) {
                 "column", "row" -> (n["children"] as? List<*>)?.forEachIndexed { i, c ->
                     @Suppress("UNCHECKED_CAST")
-                    (c as? Map<String, Any?>)?.let { checkNode(it, "$path.children[$i]", depth + 1, count, problems) }
+                    (c as? Map<String, Any?>)?.let { checkNode(it, "$path.children[$i]", depth + 1, count, builtIn, problems) }
                         ?: run { problems += "$path.children[$i] must be an object" }
                 } ?: run { problems += "$path: a $type needs \"children\"" }
                 "list" -> {
                     if (n["items"] == null) problems += "$path: a list needs \"items\""
                     @Suppress("UNCHECKED_CAST")
-                    (n["item"] as? Map<String, Any?>)?.let { checkNode(it, "$path.item", depth + 1, count, problems) }
+                    (n["item"] as? Map<String, Any?>)?.let { checkNode(it, "$path.item", depth + 1, count, builtIn, problems) }
                         ?: run { problems += "$path: a list needs an \"item\"" }
                     @Suppress("UNCHECKED_CAST")
-                    (n["header"] as? Map<String, Any?>)?.let { checkNode(it, "$path.header", depth + 1, count, problems) }
+                    (n["header"] as? Map<String, Any?>)?.let { checkNode(it, "$path.header", depth + 1, count, builtIn, problems) }
                 }
                 "text", "label" -> if (n["text"] == null) problems += "$path: a $type needs \"text\""
                 "sparkline" -> if (n["points"] == null) problems += "$path: a sparkline needs \"points\""
