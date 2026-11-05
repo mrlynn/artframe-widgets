@@ -1,0 +1,11 @@
+{
+  "spec": 1,
+  "id": "gallery",
+  "name": "Art Gallery",
+  "description": "A few of your own paintings; open one full screen with the remote",
+  "icon": "photo.on.rectangle",
+  "size": "large",
+  "title": "Gallery",
+  "data": { "art": { "source": "gallery", "loading": "Choosing paintings…", "error": "Add art to the TV to see it here" } },
+  "layout": { "type": "gallery", "items": "data.art.items", "gap": 8 }
+}
