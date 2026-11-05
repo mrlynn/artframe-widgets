@@ -158,7 +158,7 @@ weather cost one request.
 What you get:
 
 - `json`: the response, as is. Objects, arrays, strings, numbers.
-- `rss`: `{ "items": [{ "title", "source", "published" }] }`, newest first as the feed lists them, up to 50. `published` is ISO-8601.
+- `rss`: `{ "items": [{ "title", "source", "published", "description" }] }`, newest first as the feed lists them, up to 50. `published` is ISO-8601. `description` is the item's summary (or its full content when there's no summary) as plain text: tags dropped, paragraphs as blank lines, at most 2,000 characters; null when the item has none. Use [`after` and `before`](#filters) to take part of it.
 - `text`: the body as a string.
 
 Responses over 512 KB are refused. Requests give up after 10 seconds to connect or 20 to read. The
@@ -223,7 +223,7 @@ ArtFrame recorded this) isn't limited.
 ### Built-in providers
 
 These use the HUD's own settings (the city, calendars, symbols and feeds set
-in the Mac app's Information page), so a widget built on them follows those
+on the Weather, Calendar, Markets and Headlines cards in the Mac app's Screen page), so a widget built on them follows those
 settings. Times are the TV's local time, as ISO-8601 text such as
 `2026-11-02T06:34`.
 
@@ -324,13 +324,16 @@ d.precip >= 30 && !layout.compact
 | `default:x` | `x` when the value is null or empty | `data.x \| default:'—'` |
 | `upper`, `lower`, `capitalize`, `trim` | Text case and spacing | |
 | `truncate:n` | At most `n` characters, ending in `…` | |
+| `after:'x'` | What follows the first `x`; null when there's no `x` | `'a • b • c' \| after:'• '` → `b • c` |
+| `before:'x'` | What comes ahead of the first `x`; all of it when there's no `x` | `'b • c' \| before:' •'` → `b` |
 | `url` | Encoded for a URL query | `'New York' \| url` → `New+York` |
 | `count` | Items in a list, characters in text | |
 | `first`, `last` | One end of a list | |
 | `take:n`, `skip:n`, `reverse` | Part of a list | |
 | `join:sep` | A list as text, `, ` by default | |
 | `map:'key'` | Each item's `key` | `quotes \| map:'price'` |
-| `where:'key'` | Items whose `key` is true | `quotes \| where:'up' \| count` |
+| `where:'key'`, `where:'key':x` | Items whose `key` is true, or equals `x` | `quotes \| where:'up' \| count` |
+| `entries` | An object as a list of `{key, value}`, by key, for data keyed by name | `races \| entries \| where:'value.leader':'D' \| count` |
 | `sum`, `min`, `max` | Of a list of numbers | |
 | `time`, `time:true` | `9:30 AM`, or `09:30` with a 24-hour clock (the HUD's setting unless given) | |
 | `date:'pattern'` | Any [date pattern](https://developer.android.com/reference/java/time/format/DateTimeFormatter#patterns); `EEE, MMM d` by default | `date:'d MMMM'` → `2 November` |
@@ -339,6 +342,12 @@ d.precip >= 30 && !layout.compact
 | `daysUntil` | Whole days from today to the date (negative once past) | |
 | `ago` | `just now`, `5 min ago`, `3 h ago`, `2 days ago` | |
 | `wmoIcon`, `wmoText` | A WMO weather code (Open-Meteo's `weather_code`) as an emoji or words | |
+
+The `key` of `map` and `where` can be a path into each item: `'value.leader'`.
+
+In a widget file, `\n` inside an expression's quotes is a line break (JSON reads it before the
+expression does), so `before:'\n'` stops at the end of a line and `after:'\n\n'` skips to the
+next paragraph of an RSS `description`.
 
 Dates can be ISO-8601 text (with or without a time or offset), RSS-style
 dates, or Unix time in seconds or milliseconds.
@@ -382,6 +391,7 @@ computed: `"size": "{{ layout.tight ? 76 : 104 }}"`.
 | `direction` | `column` (the default) or `row`. |
 | `gap` | dp between items. |
 | `empty` | A muted line shown when the list is empty. Without it, an empty list takes no space. |
+| `sortBy` | An expression per item (named by `as`); items are drawn in ascending order of it, before `max` applies. Items it gives nothing for go last. `"r.value.cands[0].pct - r.value.cands[1].pct"` puts the closest race first. |
 | `groupBy` | An expression per item. When it changes, `header` is drawn first, with the value as `group`. A header is never the last thing in a list. |
 | `header` | The node drawn at the start of each group. |
 | `groupGap` | dp before each header after the first. Default 6. |
@@ -530,7 +540,7 @@ WidgetCatalog`), and the Mac app shows it next to the widget.
 
 **With the Mac app**: Screen › Cards › Add Widget… copies a
 `.widget.json` into the data folder's `widgets` folder, checks it, and lists
-it with the built-ins. Turn it on, fill in its settings, and click Apply to TV: the
+it with the built-ins. Turn it on, fill in its settings, and Save: the
 widgets folder goes to the TV with `hud.json`.
 
 **From the command line**:

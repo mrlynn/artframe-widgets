@@ -153,6 +153,7 @@
               "direction": { "enum": ["column", "row"] },
               "gap": { "$ref": "#/$defs/number" },
               "empty": { "$ref": "#/$defs/template" },
+              "sortBy": { "$ref": "#/$defs/expression" },
               "groupBy": { "$ref": "#/$defs/expression" },
               "header": { "$ref": "#/$defs/node" },
               "groupGap": { "$ref": "#/$defs/number" }
