@@ -1,0 +1,105 @@
+{
+  "$schema": "https://artframe.mlynn.dev/widgets/widget.schema.json",
+  "spec": 1,
+  "id": "artframe.word",
+  "author": "ArtFrame",
+  "version": "1.0.0",
+  "name": "Word of the day",
+  "description": "A new word each day, with what it means and a sentence using it, from Merriam-Webster",
+  "icon": "character.book.closed",
+  "size": "wide",
+  "title": "Today's word",
+  "x-tests": "an RSS description taken apart with after and before",
+  "data": {
+    "mw": {
+      "source": "http",
+      "url": "https://www.merriam-webster.com/wotd/feed/rss2",
+      "format": "rss",
+      "refresh": 10800,
+      "error": "No word today"
+    }
+  },
+  "layout": {
+    "type": "column",
+    "children": [
+      {
+        "type": "row",
+        "when": "layout.size == 'wide'",
+        "children": [
+          {
+            "type": "column",
+            "children": [
+              { "type": "text", "text": "{{ data.mw.items[0].title }}", "size": 38, "font": "light" },
+              {
+                "type": "text",
+                "when": "data.mw.items[0].description | after:'• '",
+                "before": 2,
+                "text": "{{ data.mw.items[0].description | after:'• ' | before:' •' | trim }}  ·  {{ data.mw.items[0].description | after:'• ' | after:'• ' | before:'\n' | trim }}",
+                "size": 13,
+                "font": "light",
+                "color": "muted"
+              }
+            ]
+          },
+          {
+            "type": "column",
+            "flex": 1,
+            "before": 36,
+            "children": [
+              {
+                "type": "text",
+                "text": "{{ data.mw.items[0].description | after:'• ' | after:'• ' | after:'\n\n' | before:'\n' }}",
+                "size": 15,
+                "lines": 3
+              },
+              {
+                "type": "text",
+                "when": "data.mw.items[0].description | after:'// '",
+                "before": 5,
+                "text": "“{{ data.mw.items[0].description | after:'// ' | before:'\n' }}”",
+                "size": 14,
+                "font": "light",
+                "color": "muted",
+                "lines": 1
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "column",
+        "when": "layout.size != 'wide'",
+        "children": [
+          { "type": "text", "text": "{{ data.mw.items[0].title }}", "size": 30, "font": "light" },
+          {
+            "type": "text",
+            "when": "data.mw.items[0].description | after:'• '",
+            "before": 2,
+            "text": "{{ data.mw.items[0].description | after:'• ' | before:' •' | trim }}  ·  {{ data.mw.items[0].description | after:'• ' | after:'• ' | before:'\n' | trim }}",
+            "size": 13,
+            "font": "light",
+            "color": "muted"
+          },
+          {
+            "type": "text",
+            "before": 10,
+            "text": "{{ data.mw.items[0].description | after:'• ' | after:'• ' | after:'\n\n' | before:'\n' }}",
+            "size": 15,
+            "lines": "{{ layout.compact ? 2 : 4 }}"
+          },
+          {
+            "type": "text",
+            "when": "(data.mw.items[0].description | after:'// ') && !layout.compact && layout.size == 'large'",
+            "before": 8,
+            "text": "“{{ data.mw.items[0].description | after:'// ' | before:'\n' }}”",
+            "size": 13,
+            "font": "light",
+            "color": "muted",
+            "lines": 2
+          },
+          { "type": "text", "before": 8, "text": "Merriam-Webster", "size": 11, "color": "accent", "tracking": 0.06 }
+        ]
+      }
+    ]
+  }
+}

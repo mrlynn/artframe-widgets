@@ -401,6 +401,18 @@ object Filters {
             val max = n(a.getOrNull(0))?.toInt() ?: 40
             if (s.length <= max) s else s.take((max - 1).coerceAtLeast(0)).trimEnd() + "…"
         },
+        // Part of a text, for feeds that put several things in one field: after:'x' is what follows
+        // the first x (null when there's no x), before:'x' what comes ahead of it (all of it when there's none).
+        "after" to { v, a, _ ->
+            val s = v?.let(Values::text)
+            val x = a.getOrNull(0)?.let(Values::text).orEmpty()
+            if (s == null || x.isEmpty()) s else s.indexOf(x).takeIf { it >= 0 }?.let { s.substring(it + x.length) }
+        },
+        "before" to { v, a, _ ->
+            val s = v?.let(Values::text)
+            val x = a.getOrNull(0)?.let(Values::text).orEmpty()
+            if (s == null || x.isEmpty()) s else s.substringBefore(x)
+        },
         "url" to { v, _, _ -> URLEncoder.encode(Values.text(v), "UTF-8") },
         // Lists
         "count" to { v, _, _ ->

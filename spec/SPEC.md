@@ -158,7 +158,7 @@ weather cost one request.
 What you get:
 
 - `json`: the response, as is. Objects, arrays, strings, numbers.
-- `rss`: `{ "items": [{ "title", "source", "published" }] }`, newest first as the feed lists them, up to 50. `published` is ISO-8601.
+- `rss`: `{ "items": [{ "title", "source", "published", "description" }] }`, newest first as the feed lists them, up to 50. `published` is ISO-8601. `description` is the item's summary (or its full content when there's no summary) as plain text: tags dropped, paragraphs as blank lines, at most 2,000 characters; null when the item has none. Use [`after` and `before`](#filters) to take part of it.
 - `text`: the body as a string.
 
 Responses over 512 KB are refused. Requests give up after 10 seconds to connect or 20 to read. The
@@ -324,6 +324,8 @@ d.precip >= 30 && !layout.compact
 | `default:x` | `x` when the value is null or empty | `data.x \| default:'—'` |
 | `upper`, `lower`, `capitalize`, `trim` | Text case and spacing | |
 | `truncate:n` | At most `n` characters, ending in `…` | |
+| `after:'x'` | What follows the first `x`; null when there's no `x` | `'a • b • c' \| after:'• '` → `b • c` |
+| `before:'x'` | What comes ahead of the first `x`; all of it when there's no `x` | `'b • c' \| before:' •'` → `b` |
 | `url` | Encoded for a URL query | `'New York' \| url` → `New+York` |
 | `count` | Items in a list, characters in text | |
 | `first`, `last` | One end of a list | |
@@ -342,6 +344,10 @@ d.precip >= 30 && !layout.compact
 | `wmoIcon`, `wmoText` | A WMO weather code (Open-Meteo's `weather_code`) as an emoji or words | |
 
 The `key` of `map` and `where` can be a path into each item: `'value.leader'`.
+
+In a widget file, `\n` inside an expression's quotes is a line break (JSON reads it before the
+expression does), so `before:'\n'` stops at the end of a line and `after:'\n\n'` skips to the
+next paragraph of an RSS `description`.
 
 Dates can be ISO-8601 text (with or without a time or offset), RSS-style
 dates, or Unix time in seconds or milliseconds.
