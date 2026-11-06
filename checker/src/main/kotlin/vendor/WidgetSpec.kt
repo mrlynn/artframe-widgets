@@ -76,10 +76,11 @@ data class WidgetSpec(
         /** Data the app fetches itself, from hud.json's own settings (location, calendars, ...). */
         val PROVIDERS = setOf("weather", "air", "moon", "markets", "calendar", "headlines")
         /**
-         * The app's own, for its built-in manifests only: `gallery` reads the art folder, and the
+         * The app's own, for its built-in manifests only: `gallery` reads the art folder, `apps` the
+         * TV's app rows (other apps' data, so never a widget file's), and the
          * `gallery` node draws its pictures. Not in the spec, so a widget file can't use either.
          */
-        private val NATIVE_PROVIDERS = setOf("gallery")
+        private val NATIVE_PROVIDERS = setOf("gallery", "apps")
         private val NATIVE_NODES = mapOf("gallery" to setOf("items", "max", "gap"))
 
         private val ID = Regex("[a-z0-9][a-z0-9._-]{0,63}")

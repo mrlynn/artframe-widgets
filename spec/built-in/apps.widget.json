@@ -1,0 +1,20 @@
+{
+  "spec": 1,
+  "id": "apps",
+  "name": "From Your Apps",
+  "description": "What your TV apps are suggesting, read on the TV; open one in its app with the remote",
+  "icon": "play.tv",
+  "size": "large",
+  "title": "From your apps",
+  "settings": [
+    { "key": "apps", "label": "Apps (blank for all)", "type": "text", "default": "" }
+  ],
+  "data": { "rows": { "source": "apps", "loading": "Reading your apps' rows…", "error": "Couldn't read your apps' rows. Install ArtFrame again from the Mac app to allow it" } },
+  "layout": {
+    "type": "column",
+    "children": [
+      { "type": "gallery", "items": "data.rows.items", "gap": 8, "flex": 1 },
+      { "type": "text", "text": "{{ data.rows.apps | take:4 | join:' · ' }}", "size": 12, "color": "muted", "lines": 1, "before": 10 }
+    ]
+  }
+}

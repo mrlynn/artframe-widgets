@@ -223,7 +223,7 @@ ArtFrame recorded this) isn't limited.
 ### Built-in providers
 
 These use the HUD's own settings (the city, calendars, symbols and feeds set
-on the Weather, Calendar, Markets and Headlines cards in the Mac app's Screen page), so a widget built on them follows those
+on the Weather, Calendar, Markets and Headlines cards in the Mac app’s Look & Schedule page), so a widget built on them follows those
 settings. Times are the TV's local time, as ISO-8601 text such as
 `2026-11-02T06:34`.
 
@@ -538,7 +538,7 @@ WidgetCatalog`), and the Mac app shows it next to the widget.
 
 ## Installing and testing
 
-**With the Mac app**: Screen › Cards › Add Widget… copies a
+**With the Mac app**: Look & Schedule › Cards › Add Widget… copies a
 `.widget.json` into the data folder's `widgets` folder, checks it, and lists
 it with the built-ins. Turn it on, fill in its settings, and Save: the
 widgets folder goes to the TV with `hud.json`.
